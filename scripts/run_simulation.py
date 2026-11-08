@@ -34,7 +34,7 @@ import pyarrow.parquet as pq
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.parsers.evorb_parser import parse_datos
+from src.parsers.evorb_parser import parse_datos, parse_condin_binary, parse_encuent
 from src.simulation.rebound_runner import (
     ReboundExperimentRunner,
     AU_IN_KM,
@@ -412,6 +412,87 @@ def main():
     df_estado_final.to_parquet(output_path / "estado_final_20anos.parquet", index=False, compression="snappy")
     df_encontros.to_parquet(output_path / "encontros_proximos.parquet", index=False, compression="snappy")
     df_trajetorias.to_parquet(output_path / "trajetorias_series_temporais.parquet", index=False, compression="snappy")
+
+    # 6. Confronto Automatizado caso existam gabaritos legados na pasta de entrada
+    condin_file = input_path / "condin.xxx"
+    encuent_file = input_path / "encuent.sal"
+
+    if condin_file.exists():
+        condin_data = parse_condin_binary(condin_file)
+        nomes_planetas = ["Mercurio", "Venus", "Terra", "Marte", "Jupiter", "Saturno", "Urano", "Netuno"]
+        records_raw = []
+        records_diff = []
+
+        for idx in range(condin_data["nbod"]):
+            pos_f = condin_data["positions"][idx]
+            vel_f = condin_data["velocities"][idx]
+            p_id = idx + 1 if idx < 8 else datos["particles"][idx - 8]["id"]
+            nome_c = nomes_planetas[idx] if idx < 8 else f"clone_{p_id}"
+            tipo_c = "planeta" if idx < 8 else "clone"
+
+            records_raw.append({
+                "corpo_id": idx + 1,
+                "nome": nome_c,
+                "tipo": tipo_c,
+                "x_au": pos_f[0],
+                "y_au": pos_f[1],
+                "z_au": pos_f[2],
+                "vx_au_ano": vel_f[0],
+                "vy_au_ano": vel_f[1],
+                "vz_au_ano": vel_f[2]
+            })
+
+            reb_row = df_estado_final.iloc[idx]
+            dr_vec = (reb_row[["x_au", "y_au", "z_au"]].values - pos_f) * AU_IN_KM
+            dr_total_km = float(np.linalg.norm(dr_vec))
+
+            records_diff.append({
+                "corpo_id": idx + 1,
+                "nome": nome_c,
+                "tipo": tipo_c,
+                "x_fortran_au": pos_f[0],
+                "x_rebound_au": reb_row["x_au"],
+                "y_fortran_au": pos_f[1],
+                "y_rebound_au": reb_row["y_au"],
+                "z_fortran_au": pos_f[2],
+                "z_rebound_au": reb_row["z_au"],
+                "diferenca_total_km": round(dr_total_km, 1)
+            })
+
+        pd.DataFrame(records_raw).to_csv(output_path / "condin_fortran_convertido.csv", index=False)
+        pd.DataFrame(records_diff).to_csv(output_path / "confronto_lado_a_lado_20anos.csv", index=False)
+
+    if encuent_file.exists() and not df_encontros.empty:
+        enc_evo = parse_encuent(encuent_file)
+        evo_map = {(e["particle_id"], round(e["t_enc_yr"], 1)): e for e in enc_evo}
+        records_enc_diff = []
+
+        for _, row in df_encontros.iterrows():
+            pid = int(row["clone_id"])
+            k = (pid, round(row["t_anos"], 1))
+            e_evo = evo_map.get(k)
+            dist_evo_radii = e_evo["dist_radii"] if e_evo else None
+            dist_evo_km = dist_evo_radii * EARTH_RADIUS_KM if dist_evo_radii is not None else None
+            t_evo = e_evo["t_enc_yr"] if e_evo else None
+            v_evo = e_evo["v_rel_kms"] if e_evo else None
+            dif_km = abs(row["distancia_km"] - dist_evo_km) if dist_evo_km is not None else None
+
+            records_enc_diff.append({
+                "clone_id": pid,
+                "janela_aproximada": "Dezembro 2032" if row["t_anos"] > 5.0 else "Dezembro 2024",
+                "t_fortran_anos": t_evo,
+                "t_rebound_anos": row["t_anos"],
+                "dist_fortran_raios_terra": dist_evo_radii,
+                "dist_rebound_raios_terra": row["distancia_raios_terra"],
+                "dist_fortran_km": dist_evo_km,
+                "dist_rebound_km": row["distancia_km"],
+                "diferenca_distancia_km": round(dif_km, 1) if dif_km is not None else None,
+                "vel_rel_fortran_kms": v_evo,
+                "vel_rel_rebound_kms": row["v_rel_kms"]
+            })
+
+        df_cenc = pd.DataFrame(records_enc_diff).sort_values(by="dist_rebound_km").reset_index(drop=True)
+        df_cenc.to_csv(output_path / "confronto_encontros_proximos.csv", index=False)
 
     # Resumo em JSON
     closest_encounter_info = df_encontros.iloc[0].to_dict() if not df_encontros.empty else None
