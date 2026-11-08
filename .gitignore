@@ -14,6 +14,8 @@ data/evorb_raw/*
 !data/evorb_raw/datos1/
 !data/evorb_raw/datos1/*
 data/evorb_raw/datos1/data_orbitas.sal
+data/evorb_raw/datos1/xyzv.sal
+data/evorb_raw/datos1/energia.sal
 
 # Python e caches
 __pycache__/

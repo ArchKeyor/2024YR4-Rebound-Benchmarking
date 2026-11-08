@@ -46,6 +46,7 @@ O repositório contém uma suíte exaustiva de dossiês formais na pasta [`Docs/
 3. **[03. Auditoria de Engenharia de Software e Robustez](Docs/03_auditoria_engenharia_de_software_e_robustez.md):** Parser de baixo nível em `struct` (sem dependências), idempotência de memória C, blindagem defensiva e varredura de zero NaNs/Infs.
 4. **[04. Relatório Técnico Final de Benchmarking](Docs/04_relatorio_tecnico_final_benchmarking.md):** O confronto numérico definitivo, Teorema de Picard-Lindelöf e auditoria forense da resolução temporal da máscara `F15.4` do Fortran.
 5. **[05. Dossiê de Possibilidades Futuras e Roadmap](Docs/05_possibilidades_futuras_e_roadmap.md):** Extensões para Efeito Yarkovsky térmico via `reboundx`, paralelização em GPU (100.000 clones) e API do NASA/JPL Horizons.
+6. **[06. Tutorial de Uso do Simulador Universal](Docs/06_tutorial_de_uso_e_simulacao_generica.md):** Guia prático para simular qualquer asteroide (2024 YR4, Apophis, Bennu), opções da CLI e estrutura das pastas `final/` e `temporal/`.
 
 ---
 
@@ -58,14 +59,16 @@ O repositório contém uma suíte exaustiva de dossiês formais na pasta [`Docs/
 │   ├── 02_auditoria_matematica_e_ciencias.md
 │   ├── 03_auditoria_engenharia_de_software_e_robustez.md
 │   ├── 04_relatorio_tecnico_final_benchmarking.md
-│   └── 05_possibilidades_futuras_e_roadmap.md
+│   ├── 05_possibilidades_futuras_e_roadmap.md
+│   └── 06_tutorial_de_uso_e_simulacao_generica.md
 ├── data/
 │   ├── evorb_raw/
 │   │   └── datos1/             # Entradas e gabaritos originais do EVORB (.dat, .xxx, .sal, .for)
 │   ├── processed/              # Tabelas consolidadas
-│   └── rebound_output/         # Saídas geradas pelas simulações REBOUND
+│   └── rebound_output/         # Saídas geradas (subpastas final/ e temporal/)
 ├── notebooks/                  # Jupyter Notebooks interativos
 ├── scripts/
+│   ├── run_simulation.py       # Simulador orbital universal (substituto direto do EVORB15)
 │   ├── run_benchmark.py        # CLI flexível com suporte a parâmetros
 │   ├── run_benchmark_full.py   # Execução comparativa completa (Modo Padrão vs Calibrado)
 │   └── test_stress_robustness.py # Testes de estresse de memória e integração fatiada
@@ -110,10 +113,18 @@ pip install -r requirements.txt
 pytest tests/ -v
 ```
 
-### 4. Executar o Benchmarking Completo de 20 Anos
+### 4. Executar o Simulador Orbital (Substituto Direto do EVORB15)
+Para rodar a simulação para qualquer pasta contendo `datos.dat`:
+```bash
+python scripts/run_simulation.py -i data/evorb_raw/datos1
+```
+*(Executa a propagação completa de 20 anos para 408 corpos em ~35 segundos, gerando os 7 arquivos equivalentes ao EVORB em formato CSV limpo nas pastas `final/` e `temporal/`. Consulte o [Tutorial Completo](Docs/06_tutorial_de_uso_e_simulacao_generica.md) para detalhes).*
+
+### 5. Executar o Benchmarking Completo de 20 Anos (Auditoria de Resíduos)
 ```bash
 python scripts/run_benchmark_full.py
 ```
+*(Executa a propagação comparativa dos 408 corpos em ambos os modos, decodifica os binários e gera as matrizes de resíduo em menos de 13 segundos).*
 *(Executa a propagação completa dos 408 corpos em ambos os modos, decodifica os binários e gera as matrizes de resíduo em menos de 13 segundos).*
 
 ---
