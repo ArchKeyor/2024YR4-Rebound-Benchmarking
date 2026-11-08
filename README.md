@@ -90,7 +90,7 @@ O repositório contém uma suíte exaustiva de dossiês formais na pasta [`Docs/
 
 ### 1. Clonar o Repositório e Criar Ambiente Virtual
 ```bash
-git clone https://github.com/kaue-loreno/2024YR4-Rebound-Benchmarking.git
+git clone https://github.com/ArchKeyor/2024YR4-Rebound-Benchmarking.git
 cd 2024YR4-Rebound-Benchmarking
 
 python -m venv venv
