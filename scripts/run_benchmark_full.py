@@ -6,6 +6,7 @@ Apresenta o confronto em ambos os modos:
 2. Modo Calibrado: REBOUND com Constante Gaussiana k do EVORB (GM = (k*365.25)^2)
 """
 
+import argparse
 import sys
 import time
 from pathlib import Path
@@ -19,22 +20,42 @@ from src.parsers.evorb_parser import parse_datos, parse_condin_binary, parse_enc
 from src.simulation.rebound_runner import ReboundExperimentRunner, AU_IN_KM
 from src.analysis.metrics import calculate_position_residual, calculate_velocity_residual
 
-DATOS_PATH = ROOT_DIR / "data/evorb_raw/datos1/datos.dat"
-CONDIN_PATH = ROOT_DIR / "data/evorb_raw/datos1/condin.xxx"
-ENCUENT_PATH = ROOT_DIR / "data/evorb_raw/datos1/encuent.sal"
-COLISIO_PATH = ROOT_DIR / "data/evorb_raw/datos1/colisio.sal"
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Execução Completa do Benchmarking 2024 YR4 (EVORB15 vs. REBOUND IAS15)",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "--input-dir", "-i",
+        type=str,
+        default="data/evorb_raw/datos1",
+        help="Caminho relativo ou absoluto da pasta contendo os arquivos (datos.dat, condin.xxx, etc.)"
+    )
+    return parser.parse_args()
 
 
-def run_full_benchmark():
+def run_full_benchmark(input_dir_str: str = "data/evorb_raw/datos1"):
+    input_dir = ROOT_DIR / input_dir_str if not Path(input_dir_str).is_absolute() else Path(input_dir_str)
+
+    datos_path = input_dir / "datos.dat"
+    condin_path = input_dir / "condin.xxx"
+    encuent_path = input_dir / "encuent.sal"
+    colisio_path = input_dir / "colisio.sal"
+
+    if not datos_path.exists():
+        print(f"[-] Erro: Arquivo {datos_path} não encontrado!")
+        sys.exit(1)
+
     print("=" * 75)
     print("🚀 FASES 2 E 3: BENCHMARKING COMPLETO DE 20 ANOS (REBOUND IAS15 vs. EVORB15)")
     print("=" * 75)
 
     # 1. Carregar Dados de Entrada e Gabarito
-    print("\n[1/5] Ingerindo arquivos do experimento legado (datos1)...")
-    datos = parse_datos(DATOS_PATH)
-    condin_gabarito = parse_condin_binary(CONDIN_PATH)
-    encuentros_gabarito = parse_encuent(ENCUENT_PATH)
+    print(f"\n[1/5] Ingerindo arquivos da pasta ({input_dir.name})...")
+    datos = parse_datos(datos_path)
+    condin_gabarito = parse_condin_binary(condin_path) if condin_path.exists() else None
+    encuentros_gabarito = parse_encuent(encuent_path) if encuent_path.exists() else []
 
     print(f"      -> datos.dat: 8 planetas e {len(datos['particles'])} clones do 2024 YR4 decodificados.")
     print(f"      -> condin.xxx: {condin_gabarito['nbod']} corpos em T = {condin_gabarito['t_final_yr']:.1f} anos (Out/2044).")
@@ -42,8 +63,8 @@ def run_full_benchmark():
 
     # Auditoria de Colisões
     colisoes_count = 0
-    if COLISIO_PATH.exists():
-        with open(COLISIO_PATH, "r", encoding="latin1") as f:
+    if colisio_path.exists():
+        with open(colisio_path, "r", encoding="latin1") as f:
             lines = [l.strip() for l in f if l.strip()]
             colisoes_count = max(0, len(lines) - 1)
     print(f"      -> colisio.sal: {colisoes_count} colisões físicas registradas.")
@@ -158,4 +179,5 @@ def run_full_benchmark():
 
 
 if __name__ == "__main__":
-    run_full_benchmark()
+    args = parse_args()
+    run_full_benchmark(args.input_dir)
