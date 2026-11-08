@@ -5,16 +5,24 @@ OrbitREBOUND: Simulador Orbital (Substituto Direto do EVORB15 em Python/C)
 Lê as condições iniciais de 'datos.dat' e executa a integração orbital de N-corpos
 no REBOUND com o solver Gauss-Radau IAS15 de 15ª ordem.
 
-Gera exatamente os 7 arquivos de saída equivalentes aos gerados pelo EVORB15,
-todos em formato CSV limpo, padronizado e diretamente analisável:
+Organiza as saídas do EVORB15 em duas pastas dedicadas:
+1. 'final/'    -> Recorte consolidado no tempo final (T = 20 anos) dos 7 arquivos:
+                  - orbitas.csv  (elementos orbitais finais)
+                  - condin.csv   (estado cartesiano final, espelho do condin.xxx)
+                  - encuent.csv  (encontros ordenados por menor distância)
+                  - colisio.csv  (resumo consolidado de colisões)
+                  - finales.csv  (resumo consolidado de ejeções)
+                  - energia.csv  (balanço final de conservação de energia)
+                  - xyzv.csv     (snapshot cartesiano final)
 
-1. 'orbitas.csv'   -> Substituto de 'orbitas.sal' (a, e, i, nodo, argper, anomedia)
-2. 'condin.csv'    -> Substituto de 'condin.xxx'  (estado cartesiano final: X, Y, Z, Vx, Vy, Vz)
-3. 'encuent.csv'   -> Substituto de 'encuent.sal' (detalhes de encontros próximos / rasantes)
-4. 'colisio.csv'   -> Substituto de 'colisio.sal' (registro de colisões físicas com planetas)
-5. 'finales.csv'   -> Substituto de 'finales.sal' (corpos ejetados ou eliminados por limites)
-6. 'energia.csv'   -> Substituto de 'energia.sal' (auditoria de conservação de energia do sistema)
-7. 'xyzv.csv'      -> Substituto de 'xyzv.sal'    (histórico temporal cartesiano X, Y, Z, Vx, Vy, Vz)
+2. 'temporal/' -> Série temporal completa (T = 0 até T = T_final) dos 7 arquivos:
+                  - orbitas.csv  (evolução temporal orbital completa desde t=0)
+                  - condin.csv   (vetores cartesianos de re-arranque no tempo)
+                  - encuent.csv  (cronograma de passagens rasantes por data)
+                  - colisio.csv  (linha do tempo de impactos)
+                  - finales.csv  (linha do tempo de ejeções)
+                  - energia.csv  (curva temporal de energia cinética, potencial e total)
+                  - xyzv.csv     (histórico completo de posições e velocidades)
 ===============================================================================
 """
 
@@ -55,7 +63,7 @@ def parse_args():
         "--output-dir", "-o",
         type=str,
         default=None,
-        help="Pasta onde os 7 arquivos CSV serão salvos (padrão: data/rebound_output/<pasta_entrada>)"
+        help="Pasta onde as pastas 'final/' e 'temporal/' serão salvas"
     )
     parser.add_argument(
         "--years", "-y",
@@ -64,10 +72,10 @@ def parse_args():
         help="Anos de simulação (padrão: lê do datos.dat, tipicamente 20.0 anos)"
     )
     parser.add_argument(
-        "--dt-xyzv",
+        "--dt-temporal",
         type=float,
-        default=0.1,
-        help="Intervalo de amostragem em anos para o arquivo xyzv.csv (padrão: 0.1 ano = ~36.5 dias)"
+        default=0.01,
+        help="Intervalo em anos para amostragem na pasta 'temporal/' (padrão: 0.01 ano = ~3.65 dias; use 0.001 para amostragem densa igual ao EVORB)"
     )
     return parser.parse_args()
 
@@ -107,13 +115,18 @@ def main():
 
     folder_name = input_path.name
     output_path = Path(args.output_dir).resolve() if args.output_dir else PROJECT_ROOT / f"data/rebound_output/{folder_name}"
-    output_path.mkdir(parents=True, exist_ok=True)
+    
+    final_dir = output_path / "final"
+    temporal_dir = output_path / "temporal"
+    final_dir.mkdir(parents=True, exist_ok=True)
+    temporal_dir.mkdir(parents=True, exist_ok=True)
 
     print("=" * 80)
     print("🪐 OrbitREBOUND: SIMULADOR ORBITAL (SUBSTITUTO DIRETO DO EVORB15)")
     print("=" * 80)
-    print(f"📂 Entrada: {input_path}")
-    print(f"📁 Saída:   {output_path}")
+    print(f"📂 Entrada:    {input_path}")
+    print(f"📁 Pasta Final:    {final_dir}")
+    print(f"📁 Pasta Temporal: {temporal_dir}")
 
     # 1. Carrega dados.dat
     print("\n[1/4] Lendo dados.dat...")
@@ -123,6 +136,7 @@ def main():
     t_total_anos = args.years if args.years is not None else params.get("tmax_yr", 20.0)
     r_crit_min = params.get("rcrit1_au", 0.1)
     r_crit_max = params.get("rcrit2_au", 100.0)
+    dt_temp = max(0.0005, args.dt_temporal)
 
     # 2. Configura REBOUND com calibração gaussiana idêntica ao EVORB
     print(f"[2/4] Configurando REBOUND (IAS15, 15ª ordem, 8 planetas + {num_clones} clones)...")
@@ -136,57 +150,65 @@ def main():
     jd_base = params["t0_particles_jd"]
     nomes_planetas = ["Mercurio", "Venus", "Terra", "Marte", "Jupiter", "Saturno", "Urano", "Netuno"]
 
-    # 3. Propagação e monitoramento de encontros, órbitas, energia e posições
-    print(f"[3/4] Integrando {t_total_anos:.1f} anos no futuro com amostragem dos 7 arquivos...")
+    # 3. Prepara arquivos de streaming para a pasta temporal/
+    f_orb = open(temporal_dir / "orbitas.csv", "w", encoding="utf-8", buffering=1024 * 1024)
+    f_orb.write("t_anos,N,nome,tipo,a,e,i_graus,nodo_graus,argper_graus,anomedia_graus\n")
+
+    f_xyz = open(temporal_dir / "xyzv.csv", "w", encoding="utf-8", buffering=1024 * 1024)
+    f_xyz.write("t_anos,N,nome,tipo,x_au,y_au,z_au,vx_au_ano,vy_au_ano,vz_au_ano\n")
+
+    f_con = open(temporal_dir / "condin.csv", "w", encoding="utf-8", buffering=1024 * 1024)
+    f_con.write("t_anos,N,nome,tipo,x_au,y_au,z_au,vx_au_ano,vy_au_ano,vz_au_ano\n")
+
+    f_ene = open(temporal_dir / "energia.csv", "w", encoding="utf-8", buffering=64 * 1024)
+    f_ene.write("t_anos,energia_total,energia_cinetica,energia_potencial,delta_e_relativo\n")
+
+    def grava_snapshot_temporal(t_val, e_base):
+        sol_now = sim.particles[0]
+        # Energia
+        e_now = sim.energy()
+        t_kin = 0.5 * sum(sim.particles[k].m * (sim.particles[k].vx**2 + sim.particles[k].vy**2 + sim.particles[k].vz**2) for k in range(9))
+        de_rel = abs((e_now - e_base) / e_base) if abs(e_base) > 1e-15 else 0.0
+        f_ene.write(f"{t_val:.4f},{e_now:.12f},{t_kin:.12f},{e_now - t_kin:.12f},{de_rel:.6e}\n")
+
+        # Orbitas e Coordenadas para cada corpo
+        for k in range(1, sim.N):
+            pk = sim.particles[k]
+            nome_k = nomes_planetas[k - 1] if k < 9 else f"clone_{pk.name.split('_')[-1]}"
+            tipo_k = "planeta" if k < 9 else "clone"
+
+            # Orbitais
+            orb = pk.orbit(primary=sol_now)
+            f_orb.write(f"{t_val:.4f},{k},{nome_k},{tipo_k},{orb.a:.6f},{orb.e:.6f},{np.degrees(orb.inc):.4f},{np.degrees(orb.Omega):.4f},{np.degrees(orb.omega):.4f},{np.degrees(orb.M):.4f}\n")
+
+            # Cartesianos
+            xh = pk.x - sol_now.x
+            yh = pk.y - sol_now.y
+            zh = pk.z - sol_now.z
+            vxh = (pk.vx - sol_now.vx) * two_pi
+            vyh = (pk.vy - sol_now.vy) * two_pi
+            vzh = (pk.vz - sol_now.vz) * two_pi
+            linha_cart = f"{t_val:.4f},{k},{nome_k},{tipo_k},{xh:.6f},{yh:.6f},{zh:.6f},{vxh:.6f},{vyh:.6f},{vzh:.6f}\n"
+            f_xyz.write(linha_cart)
+            f_con.write(linha_cart)
+
+    # 4. Propagação temporal com REBOUND
+    print(f"[3/4] Integrando {t_total_anos:.1f} anos no futuro (dt_temporal = {dt_temp:.4f} anos)...")
     start_time = time.perf_counter()
 
-    dt_step = 0.01  # passo de detecção fina de ~3.65 dias
-    dt_xyzv = max(0.001, args.dt_xyzv)
+    e_ini = sim.energy()
+    # Grava estado inicial t = 0.0 na pasta temporal/
+    grava_snapshot_temporal(0.0, e_ini)
+
+    dt_step = min(0.01, dt_temp)
     total_steps = int(math.ceil(t_total_anos / dt_step))
+    next_save_t = dt_temp
 
     last_d = {p["id"]: 999.0 for p in datos["particles"]}
     prev_d = {p["id"]: 999.0 for p in datos["particles"]}
     candidatos_enc = []
     colisoes_list = []
     finales_list = []
-    energia_records = []
-    xyzv_records = []
-
-    # Energia inicial para cálculo relativo delta E / E
-    e_ini = sim.energy()
-    next_xyzv_t = 0.0
-
-    # Gravação do estado inicial (t = 0) em energia e xyzv
-    sol0 = sim.particles[0]
-    # Energia cinética (Sol + 8 planetas)
-    t_kin0 = 0.5 * sum(sim.particles[i].m * (sim.particles[i].vx**2 + sim.particles[i].vy**2 + sim.particles[i].vz**2) for i in range(9))
-    energia_records.append({
-        "t_anos": 0.0,
-        "energia_total": round(float(e_ini), 12),
-        "energia_cinetica": round(float(t_kin0), 12),
-        "energia_potencial": round(float(e_ini - t_kin0), 12),
-        "delta_e_relativo": 0.0
-    })
-
-    # Snapshot inicial em xyzv
-    for i in range(1, sim.N):
-        p = sim.particles[i]
-        nome = nomes_planetas[i - 1] if i < 9 else f"clone_{p.name.split('_')[-1]}"
-        tipo = "planeta" if i < 9 else "clone"
-        xyzv_records.append({
-            "t_anos": 0.0,
-            "N": i,
-            "nome": nome,
-            "tipo": tipo,
-            "x_au": round(float(p.x - sol0.x), 6),
-            "y_au": round(float(p.y - sol0.y), 6),
-            "z_au": round(float(p.z - sol0.z), 6),
-            "vx_au_ano": round(float((p.vx - sol0.vx) * two_pi), 6),
-            "vy_au_ano": round(float((p.vy - sol0.vy) * two_pi), 6),
-            "vz_au_ano": round(float((p.vz - sol0.vz) * two_pi), 6)
-        })
-
-    next_xyzv_t += dt_xyzv
 
     for s in range(1, total_steps + 1):
         t_curr = min(s * dt_step, t_total_anos)
@@ -194,40 +216,12 @@ def main():
         sol = sim.particles[0]
         earth = sim.particles[earth_idx]
 
-        # Amostragem periódica de energia e xyzv
-        if t_curr >= (next_xyzv_t - 1e-6) or s == total_steps:
-            e_now = sim.energy()
-            t_kin = 0.5 * sum(sim.particles[i].m * (sim.particles[i].vx**2 + sim.particles[i].vy**2 + sim.particles[i].vz**2) for i in range(9))
-            de_rel = abs((e_now - e_ini) / e_ini) if abs(e_ini) > 1e-15 else 0.0
+        # Amostragem periódica na pasta temporal/
+        if t_curr >= (next_save_t - 1e-6) or s == total_steps:
+            grava_snapshot_temporal(t_curr, e_ini)
+            next_save_t += dt_temp
 
-            energia_records.append({
-                "t_anos": round(t_curr, 4),
-                "energia_total": round(float(e_now), 12),
-                "energia_cinetica": round(float(t_kin), 12),
-                "energia_potencial": round(float(e_now - t_kin), 12),
-                "delta_e_relativo": float(f"{de_rel:.6e}")
-            })
-
-            for i in range(1, sim.N):
-                p = sim.particles[i]
-                nome = nomes_planetas[i - 1] if i < 9 else f"clone_{p.name.split('_')[-1]}"
-                tipo = "planeta" if i < 9 else "clone"
-                xyzv_records.append({
-                    "t_anos": round(t_curr, 4),
-                    "N": i,
-                    "nome": nome,
-                    "tipo": tipo,
-                    "x_au": round(float(p.x - sol.x), 6),
-                    "y_au": round(float(p.y - sol.y), 6),
-                    "z_au": round(float(p.z - sol.z), 6),
-                    "vx_au_ano": round(float((p.vx - sol.vx) * two_pi), 6),
-                    "vy_au_ano": round(float((p.vy - sol.vy) * two_pi), 6),
-                    "vz_au_ano": round(float((p.vz - sol.vz) * two_pi), 6)
-                })
-
-            next_xyzv_t += dt_xyzv
-
-        # Monitoramento de encontros, limites e colisões para cada clone
+        # Checagens para cada clone (colisões, limites e encontros)
         for p in datos["particles"]:
             pid = p["id"]
             c = sim.particles[f"clone_{pid}"]
@@ -236,29 +230,29 @@ def main():
             dz = earth.z - c.z
             d_au = math.sqrt(dx**2 + dy**2 + dz**2)
 
-            # Colisão física com a Terra (raio < raio terrestre)
+            # Colisão física com a Terra
             if d_au <= (EARTH_RADIUS_KM / AU_IN_KM):
                 colisoes_list.append({
-                    "clone_id": pid,
                     "t_anos": round(t_curr, 4),
+                    "clone_id": pid,
                     "corpo_atingido": "Terra",
                     "dist_km": round(d_au * AU_IN_KM, 1),
                     "vel_impacto_kms": round(math.sqrt((earth.vx - c.vx)**2 + (earth.vy - c.vy)**2 + (earth.vz - c.vz)**2) * two_pi * AU_IN_KM / (JULIAN_YEAR_DAYS * 86400.0), 2)
                 })
 
-            # Checagem de limites de ejeção / colisão solar (finales.sal)
+            # Checagem de limites de ejeção / colisão solar (finales)
             r_sol = math.sqrt((c.x - sol.x)**2 + (c.y - sol.y)**2 + (c.z - sol.z)**2)
             if r_sol < r_crit_min:
                 finales_list.append({
-                    "clone_id": pid,
                     "t_anos": round(t_curr, 4),
+                    "clone_id": pid,
                     "motivo_eliminacao": "queda_solar",
                     "dist_au": round(r_sol, 4)
                 })
             elif r_sol > r_crit_max:
                 finales_list.append({
-                    "clone_id": pid,
                     "t_anos": round(t_curr, 4),
+                    "clone_id": pid,
                     "motivo_eliminacao": "ejecao_sistema",
                     "dist_au": round(r_sol, 4)
                 })
@@ -271,7 +265,13 @@ def main():
             prev_d[pid] = last_d[pid]
             last_d[pid] = d_au
 
-    # Refinamento de precisão micrométrica nos encontros detectados
+    # Fecha arquivos de streaming temporal
+    f_orb.close()
+    f_xyz.close()
+    f_con.close()
+    f_ene.close()
+
+    # Refinamento de precisão nos encontros detectados
     encontros_list = []
     if candidatos_enc:
         janelas = {}
@@ -318,8 +318,8 @@ def main():
                 d_radii = d_km / EARTH_RADIUS_KM
                 jd_enc = jd_base + (best_t[pid] * JULIAN_YEAR_DAYS)
                 encontros_list.append({
-                    "clone_id": pid,
                     "t_anos": round(best_t[pid], 4),
+                    "clone_id": pid,
                     "data_estimada": jd_to_gregorian(jd_enc),
                     "dist_raios_terra": round(d_radii, 1),
                     "dist_km": round(d_km, 1),
@@ -329,19 +329,49 @@ def main():
     elapsed = time.perf_counter() - start_time
     print(f"      -> Concluído em {elapsed:.2f} s ({t_total_anos/elapsed:.1f} anos/s)!")
 
-    # 4. Geração dos 7 Arquivos Oficiais Padronizados em CSV
-    print("\n[4/4] Gerando os 7 arquivos de saída oficiais em CSV...")
-    sol = sim.particles[0]
+    # 5. Salva os arquivos restantes de temporal/ e todos os de final/
+    print("\n[4/4] Gerando os arquivos nas pastas final/ e temporal/...")
 
-    # 1. ORBITAS (substituto de orbitas.sal: a, e, i, nodo, argper, anomedia)
-    orbitas_records = []
+    # A) Encontros (temporal = cronológico; final = ordenado por dist_km)
+    df_enc_cron = pd.DataFrame(encontros_list) if encontros_list else pd.DataFrame(
+        columns=["t_anos", "clone_id", "data_estimada", "dist_raios_terra", "dist_km", "vel_rel_kms"]
+    )
+    if not df_enc_cron.empty:
+        df_enc_cron = df_enc_cron.sort_values(by="t_anos").reset_index(drop=True)
+    df_enc_cron.to_csv(temporal_dir / "encuent.csv", index=False)
+
+    df_enc_final = df_enc_cron.copy()
+    if not df_enc_final.empty:
+        df_enc_final = df_enc_final.sort_values(by="dist_km").reset_index(drop=True)
+    df_enc_final.to_csv(final_dir / "encuent.csv", index=False)
+
+    # B) Colisões (temporal = cronológico; final = consolidado)
+    df_col_cron = pd.DataFrame(colisoes_list) if colisoes_list else pd.DataFrame(
+        columns=["t_anos", "clone_id", "corpo_atingido", "dist_km", "vel_impacto_kms"]
+    )
+    df_col_cron.to_csv(temporal_dir / "colisio.csv", index=False)
+    df_col_cron.to_csv(final_dir / "colisio.csv", index=False)
+
+    # C) Finais / Ejeções (temporal = cronológico; final = consolidado)
+    df_fin_cron = pd.DataFrame(finales_list) if finales_list else pd.DataFrame(
+        columns=["t_anos", "clone_id", "motivo_eliminacao", "dist_au"]
+    )
+    df_fin_cron.to_csv(temporal_dir / "finales.csv", index=False)
+    df_fin_cron.to_csv(final_dir / "finales.csv", index=False)
+
+    # D) PASTA FINAL/ (Snapshots consolidados dos 408 corpos no instante final t = 20.0)
+    sol_final = sim.particles[0]
+    final_orbitas_records = []
+    final_condin_records = []
+
     for i in range(1, sim.N):
         p = sim.particles[i]
-        orb = p.orbit(primary=sol)
+        orb = p.orbit(primary=sol_final)
         nome = nomes_planetas[i - 1] if i < 9 else f"clone_{p.name.split('_')[-1]}"
         tipo = "planeta" if i < 9 else "clone"
 
-        orbitas_records.append({
+        # Orbitais
+        final_orbitas_records.append({
             "N": i,
             "nome": nome,
             "tipo": tipo,
@@ -352,75 +382,63 @@ def main():
             "argper_graus": round(float(np.degrees(orb.omega)), 4),
             "anomedia_graus": round(float(np.degrees(orb.M)), 4)
         })
-    df_orbitas = pd.DataFrame(orbitas_records)
-    df_orbitas.to_csv(output_path / "orbitas.csv", index=False)
 
-    # 2. CONDIN (substituto direto do condin.xxx binário: X, Y, Z, Vx, Vy, Vz no instante final)
-    condin_records = []
-    for i in range(1, sim.N):
-        p = sim.particles[i]
-        nome = nomes_planetas[i - 1] if i < 9 else f"clone_{p.name.split('_')[-1]}"
-        tipo = "planeta" if i < 9 else "clone"
-        x_h = p.x - sol.x
-        y_h = p.y - sol.y
-        z_h = p.z - sol.z
-        vx_h = (p.vx - sol.vx) * two_pi
-        vy_h = (p.vy - sol.vy) * two_pi
-        vz_h = (p.vz - sol.vz) * two_pi
-
-        condin_records.append({
+        # Cartesianos (X, Y, Z, Vx, Vy, Vz)
+        xh = p.x - sol_final.x
+        yh = p.y - sol_final.y
+        zh = p.z - sol_final.z
+        vxh = (p.vx - sol_final.vx) * two_pi
+        vyh = (p.vy - sol_final.vy) * two_pi
+        vzh = (p.vz - sol_final.vz) * two_pi
+        final_condin_records.append({
             "N": i,
             "nome": nome,
             "tipo": tipo,
-            "x_au": round(float(x_h), 6),
-            "y_au": round(float(y_h), 6),
-            "z_au": round(float(z_h), 6),
-            "vx_au_ano": round(float(vx_h), 6),
-            "vy_au_ano": round(float(vy_h), 6),
-            "vz_au_ano": round(float(vz_h), 6)
+            "x_au": round(float(xh), 6),
+            "y_au": round(float(yh), 6),
+            "z_au": round(float(zh), 6),
+            "vx_au_ano": round(float(vxh), 6),
+            "vy_au_ano": round(float(vyh), 6),
+            "vz_au_ano": round(float(vzh), 6)
         })
-    df_condin = pd.DataFrame(condin_records)
-    df_condin.to_csv(output_path / "condin.csv", index=False)
 
-    # 3. ENCUENT (substituto de encuent.sal)
-    df_encuent = pd.DataFrame(encontros_list) if encontros_list else pd.DataFrame(
-        columns=["clone_id", "t_anos", "data_estimada", "dist_raios_terra", "dist_km", "vel_rel_kms"]
-    )
-    if not df_encuent.empty:
-        df_encuent = df_encuent.sort_values(by="dist_km").reset_index(drop=True)
-    df_encuent.to_csv(output_path / "encuent.csv", index=False)
+    pd.DataFrame(final_orbitas_records).to_csv(final_dir / "orbitas.csv", index=False)
+    df_final_condin = pd.DataFrame(final_condin_records)
+    df_final_condin.to_csv(final_dir / "condin.csv", index=False)
+    df_final_condin.to_csv(final_dir / "xyzv.csv", index=False)
 
-    # 4. COLISIO (substituto de colisio.sal)
-    df_colisio = pd.DataFrame(colisoes_list) if colisoes_list else pd.DataFrame(
-        columns=["clone_id", "t_anos", "corpo_atingido", "dist_km", "vel_impacto_kms"]
-    )
-    df_colisio.to_csv(output_path / "colisio.csv", index=False)
-
-    # 5. FINALES (substituto de finales.sal)
-    df_finales = pd.DataFrame(finales_list) if finales_list else pd.DataFrame(
-        columns=["clone_id", "t_anos", "motivo_eliminacao", "dist_au"]
-    )
-    df_finales.to_csv(output_path / "finales.csv", index=False)
-
-    # 6. ENERGIA (substituto de energia.sal)
-    df_energia = pd.DataFrame(energia_records)
-    df_energia.to_csv(output_path / "energia.csv", index=False)
-
-    # 7. XYZV (substituto de xyzv.sal)
-    df_xyzv = pd.DataFrame(xyzv_records)
-    df_xyzv.to_csv(output_path / "xyzv.csv", index=False)
+    # Energia final (resumo)
+    e_end = sim.energy()
+    t_kin_end = 0.5 * sum(sim.particles[k].m * (sim.particles[k].vx**2 + sim.particles[k].vy**2 + sim.particles[k].vz**2) for k in range(9))
+    de_rel_end = abs((e_end - e_ini) / e_ini) if abs(e_ini) > 1e-15 else 0.0
+    pd.DataFrame([{
+        "t_final_anos": round(t_total_anos, 4),
+        "energia_total": round(float(e_end), 12),
+        "energia_cinetica": round(float(t_kin_end), 12),
+        "energia_potencial": round(float(e_end - t_kin_end), 12),
+        "delta_e_relativo": float(f"{de_rel_end:.6e}")
+    }]).to_csv(final_dir / "energia.csv", index=False)
 
     print("\n" + "=" * 80)
-    print("✅ SIMULAÇÃO CONCLUÍDA COM SUCESSO! OS 7 ARQUIVOS PADRONIZADOS:")
+    print("✅ SIMULAÇÃO CONCLUÍDA COM SUCESSO! ESTRUTURA GERADA:")
     print("=" * 80)
-    print(f"📁 Pasta de Saída: {output_path}")
-    print(f"   1. orbitas.csv  -> Elementos orbitais finais (a, e, i, nodo, argper, anomed) [{len(df_orbitas)} corpos]")
-    print(f"   2. condin.csv   -> Coordenadas cartesianas finais (X, Y, Z, Vx, Vy, Vz)    [{len(df_condin)} corpos]")
-    print(f"   3. encuent.csv  -> Detalhes de encontros próximos / rasantes               [{len(df_encuent)} registros]")
-    print(f"   4. colisio.csv  -> Registro de impactos na superfície de planetas          [{len(df_colisio)} impactos]")
-    print(f"   5. finales.csv  -> Registro de partículas eliminadas / ejetadas            [{len(df_finales)} ejetados]")
-    print(f"   6. energia.csv  -> Auditoria temporal de conservação de energia            [{len(df_energia)} amostras]")
-    print(f"   7. xyzv.csv     -> Histórico temporal das trajetórias cartesianas           [{len(df_xyzv)} pontos]")
+    print(f"📁 Pasta de Saída Geral: {output_path}")
+    print("\n   [📂 final/ -> Snapshots Consolidados no Tempo Final T=20]")
+    print("      1. orbitas.csv  (elementos orbitais finais)")
+    print("      2. condin.csv   (coordenadas cartesianas finais, espelho condin.xxx)")
+    print("      3. encuent.csv  (encontros ordenados por menor distância)")
+    print("      4. colisio.csv  (balanço de colisões)")
+    print("      5. finales.csv  (balanço de ejeções)")
+    print("      6. energia.csv  (balanço de conservação de energia)")
+    print("      7. xyzv.csv     (snapshot cartesiano final)")
+    print("\n   [📂 temporal/ -> Séries Temporais Completas T=0 até T=20]")
+    print("      1. orbitas.csv  (evolução temporal orbital completa)")
+    print("      2. condin.csv   (evolução cartesiana para re-arranque)")
+    print("      3. encuent.csv  (cronograma de encontros)")
+    print("      4. colisio.csv  (cronograma de impactos)")
+    print("      5. finales.csv  (cronograma de ejeções)")
+    print("      6. energia.csv  (curva temporal de energia)")
+    print("      7. xyzv.csv     (histórico completo de posições e velocidades)")
     print("=" * 80)
 
 
