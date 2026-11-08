@@ -5,6 +5,7 @@ venv/
 # Dados pesados e saídas intermediárias
 data/rebound_output/
 *.sal_Error.txt
+data_orbitas.sal
 *.7z
 *.zip
 
@@ -12,6 +13,7 @@ data/rebound_output/
 data/evorb_raw/*
 !data/evorb_raw/datos1/
 !data/evorb_raw/datos1/*
+data/evorb_raw/datos1/data_orbitas.sal
 
 # Python e caches
 __pycache__/
