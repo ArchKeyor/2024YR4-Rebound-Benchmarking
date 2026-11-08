@@ -1,0 +1,28 @@
+# Ambiente Virtual
+venv/
+.env
+
+# Dados pesados e saídas intermediárias
+data/rebound_output/
+*.sal_Error.txt
+*.7z
+*.zip
+
+# Preservar a pasta piloto datos1 (~180 KB) para reprodução imediata do benchmark, ignorar outros dumps
+data/evorb_raw/*
+!data/evorb_raw/datos1/
+!data/evorb_raw/datos1/*
+
+# Python e caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+
+# IDE e sistema operacional
+.vscode/
+.idea/
+*.swp
+desktop.ini
+Thumbs.db
