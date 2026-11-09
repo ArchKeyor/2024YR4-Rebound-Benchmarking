@@ -1,9 +1,14 @@
 """
 ===============================================================================
-OrbitREBOUND: Simulador Orbital (Substituto Direto do EVORB15 em Python/C)
+OrbitREBOUND: Simulador Orbital Universal (Substituto Direto do EVORB15)
 ===============================================================================
 Lê as condições iniciais de 'datos.dat' e executa a integração orbital de N-corpos
 no REBOUND com o solver Gauss-Radau IAS15 de 15ª ordem.
+
+Suporta:
+- Execução individual (apontando para uma pasta ou arquivo datos.dat específico).
+- Execução em lote / recursiva (apontando para uma pasta raiz, varrendo todas as
+  subpastas automaticamente até encontrar todos os arquivos 'datos.dat').
 
 Organiza as saídas do EVORB15 em duas pastas dedicadas:
 1. 'final/'    -> Recorte consolidado no tempo final (T = 20 anos) dos 7 arquivos:
@@ -18,10 +23,10 @@ Organiza as saídas do EVORB15 em duas pastas dedicadas:
 2. 'temporal/' -> Série temporal completa (T = 0 até T = T_final) dos 7 arquivos:
                   - orbitas.csv  (evolução temporal orbital completa desde t=0)
                   - condin.csv   (vetores cartesianos de re-arranque no tempo)
-                  - encuent.csv  (cronograma de passagens rasantes por data)
+                  - encuent.csv  (cronograma de passagens rasantes por data e clone)
                   - colisio.csv  (linha do tempo de impactos)
                   - finales.csv  (linha do tempo de ejeções)
-                  - energia.csv  (curva temporal de energia cinética, potencial e total)
+                  - energia.csv  (curva temporal de energia em unidades físicas M_sol*AU^2/ano^2)
                   - xyzv.csv     (histórico completo de posições e velocidades)
 ===============================================================================
 """
@@ -50,20 +55,20 @@ EARTH_RADIUS_KM = 6371.0
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="OrbitREBOUND: Substituto Moderno do EVORB15",
+        description="OrbitREBOUND: Substituto Moderno do EVORB15 (Suporte Individual e em Lote)",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument(
         "--input-dir", "-i",
         type=str,
         default="data/evorb_raw/datos1",
-        help="Pasta contendo o arquivo datos.dat"
+        help="Pasta com datos.dat, arquivo datos.dat, ou pasta raiz para busca recursiva de todos os datos.dat"
     )
     parser.add_argument(
         "--output-dir", "-o",
         type=str,
         default=None,
-        help="Pasta onde as pastas 'final/' e 'temporal/' serão salvas"
+        help="Pasta base onde as subpastas 'final/' e 'temporal/' serão salvas"
     )
     parser.add_argument(
         "--years", "-y",
@@ -104,29 +109,19 @@ def jd_to_gregorian(jd: float) -> str:
     return f"{year:04d}-{month:02d}-{int(day):02d}"
 
 
-def main():
-    args = parse_args()
-    input_path = Path(args.input_dir).resolve()
-    datos_file = input_path / "datos.dat"
-
-    if not datos_file.exists():
-        print(f"[-] Erro: Arquivo {datos_file} não encontrado!")
-        sys.exit(1)
-
-    folder_name = input_path.name
-    output_path = Path(args.output_dir).resolve() if args.output_dir else PROJECT_ROOT / f"data/rebound_output/{folder_name}"
-    
+def simulate_single_dataset(datos_file: Path, output_path: Path, args, index_info: str = ""):
+    """Executa a integração completa para um único arquivo datos.dat."""
     final_dir = output_path / "final"
     temporal_dir = output_path / "temporal"
     final_dir.mkdir(parents=True, exist_ok=True)
     temporal_dir.mkdir(parents=True, exist_ok=True)
 
     print("=" * 80)
-    print("🪐 OrbitREBOUND: SIMULADOR ORBITAL (SUBSTITUTO DIRETO DO EVORB15)")
+    print(f"🪐 OrbitREBOUND: SIMULANDO CONJUNTO {index_info}")
     print("=" * 80)
-    print(f"📂 Entrada:    {input_path}")
-    print(f"📁 Pasta Final:    {final_dir}")
-    print(f"📁 Pasta Temporal: {temporal_dir}")
+    print(f"📂 Arquivo datos.dat: {datos_file}")
+    print(f"📁 Pasta Final:        {final_dir}")
+    print(f"📁 Pasta Temporal:     {temporal_dir}")
 
     # 1. Carrega dados.dat
     print("\n[1/4] Lendo dados.dat...")
@@ -150,6 +145,10 @@ def main():
     jd_base = params["t0_particles_jd"]
     nomes_planetas = ["Mercurio", "Venus", "Terra", "Marte", "Jupiter", "Saturno", "Urano", "Netuno"]
 
+    # Fator de conversão da constante de Gauss para unidades físicas (Massa Solar * AU^2 / ano^2)
+    # No Fortran EVORB: GM = (k * 365.25)^2 ≈ 39.476926
+    gm_factor = (0.01720209895 * 365.25)**2
+
     # 3. Prepara arquivos de streaming para a pasta temporal/
     f_orb = open(temporal_dir / "orbitas.csv", "w", encoding="utf-8", buffering=1024 * 1024)
     f_orb.write("t_anos,N,nome,tipo,a,e,i_graus,nodo_graus,argper_graus,anomedia_graus\n")
@@ -163,13 +162,9 @@ def main():
     f_ene = open(temporal_dir / "energia.csv", "w", encoding="utf-8", buffering=64 * 1024)
     f_ene.write("t_anos,energia_total,energia_cinetica,energia_potencial,delta_e_relativo\n")
 
-    # Fator de conversão da constante de Gauss para unidades físicas (Massa Solar * AU^2 / ano^2)
-    # No Fortran EVORB: GM = (k * 365.25)^2 ≈ 39.476926
-    gm_factor = (0.01720209895 * 365.25)**2
-
     def grava_snapshot_temporal(t_val, e_base):
         sol_now = sim.particles[0]
-        # Energia em unidades físicas idênticas ao EVORB (AU^2 / ano^2)
+        # Energia em unidades físicas idênticas ao EVORB (M_sol * AU^2 / ano^2)
         e_now = sim.energy()
         t_kin = 0.5 * sum(sim.particles[k].m * (sim.particles[k].vx**2 + sim.particles[k].vy**2 + sim.particles[k].vz**2) for k in range(9))
         de_rel = abs((e_now - e_base) / e_base) if abs(e_base) > 1e-15 else 0.0
@@ -336,7 +331,7 @@ def main():
     # 5. Salva os arquivos restantes de temporal/ e todos os de final/
     print("\n[4/4] Gerando os arquivos nas pastas final/ e temporal/...")
 
-    # A) Encontros (temporal = cronológico; final = ordenado por dist_km)
+    # A) Encontros (temporal = cronológico ordenado por [t_anos, clone_id]; final = ordenado por dist_km)
     df_enc_cron = pd.DataFrame(encontros_list) if encontros_list else pd.DataFrame(
         columns=["t_anos", "clone_id", "data_estimada", "dist_raios_terra", "dist_km", "vel_rel_kms"]
     )
@@ -411,7 +406,7 @@ def main():
     df_final_condin.to_csv(final_dir / "condin.csv", index=False)
     df_final_condin.to_csv(final_dir / "xyzv.csv", index=False)
 
-    # Energia final (resumo)
+    # Energia final (resumo em unidades físicas)
     e_end = sim.energy()
     t_kin_end = 0.5 * sum(sim.particles[k].m * (sim.particles[k].vx**2 + sim.particles[k].vy**2 + sim.particles[k].vz**2) for k in range(9))
     de_rel_end = abs((e_end - e_ini) / e_ini) if abs(e_ini) > 1e-15 else 0.0
@@ -423,26 +418,67 @@ def main():
         "delta_e_relativo": float(f"{de_rel_end:.6e}")
     }]).to_csv(final_dir / "energia.csv", index=False)
 
-    print("\n" + "=" * 80)
-    print("✅ SIMULAÇÃO CONCLUÍDA COM SUCESSO! ESTRUTURA GERADA:")
+    print(f"✅ Concluído: {output_path.name} finalizado com sucesso!")
+
+
+def main():
+    args = parse_args()
+    input_path = Path(args.input_dir).resolve()
+
+    if not input_path.exists():
+        print(f"[-] Erro: Caminho de entrada '{input_path}' não encontrado!")
+        sys.exit(1)
+
+    # 1. Descoberta inteligente e recursiva dos arquivos datos.dat
+    if input_path.is_file() and input_path.name == "datos.dat":
+        datos_files = [input_path]
+    elif input_path.is_dir():
+        # Busca recursiva: desce em todas as subpastas procurando por datos.dat
+        datos_files = sorted(list(input_path.rglob("datos.dat")))
+    else:
+        datos_files = []
+
+    if not datos_files:
+        print(f"[-] Erro: Nenhum arquivo 'datos.dat' encontrado em '{input_path}' ou suas subpastas!")
+        sys.exit(1)
+
+    total_datasets = len(datos_files)
     print("=" * 80)
-    print(f"📁 Pasta de Saída Geral: {output_path}")
-    print("\n   [📂 final/ -> Snapshots Consolidados no Tempo Final T=20]")
-    print("      1. orbitas.csv  (elementos orbitais finais)")
-    print("      2. condin.csv   (coordenadas cartesianas finais, espelho condin.xxx)")
-    print("      3. encuent.csv  (encontros ordenados por menor distância)")
-    print("      4. colisio.csv  (balanço de colisões)")
-    print("      5. finales.csv  (balanço de ejeções)")
-    print("      6. energia.csv  (balanço de conservação de energia)")
-    print("      7. xyzv.csv     (snapshot cartesiano final)")
-    print("\n   [📂 temporal/ -> Séries Temporais Completas T=0 até T=20]")
-    print("      1. orbitas.csv  (evolução temporal orbital completa)")
-    print("      2. condin.csv   (evolução cartesiana para re-arranque)")
-    print("      3. encuent.csv  (cronograma de encontros)")
-    print("      4. colisio.csv  (cronograma de impactos)")
-    print("      5. finales.csv  (cronograma de ejeções)")
-    print("      6. energia.csv  (curva temporal de energia)")
-    print("      7. xyzv.csv     (histórico completo de posições e velocidades)")
+    print(f"🪐 OrbitREBOUND: DESCOBERTA AUTOMÁTICA RECURSIVA ({total_datasets} CONJUNTO(S) ENCONTRADO(S))")
+    print("=" * 80)
+    for idx, df_path in enumerate(datos_files, 1):
+        rel_disp = df_path.relative_to(PROJECT_ROOT) if df_path.is_relative_to(PROJECT_ROOT) else df_path
+        print(f"   [{idx}/{total_datasets}] {rel_disp}")
+    print("=" * 80 + "\n")
+
+    t_global_start = time.perf_counter()
+
+    for idx, datos_file in enumerate(datos_files, 1):
+        # Determina a pasta de saída preservando hierarquia de subpastas
+        if total_datasets == 1:
+            if args.output_dir:
+                output_path = Path(args.output_dir).resolve()
+            else:
+                output_path = PROJECT_ROOT / "data" / "rebound_output" / datos_file.parent.name
+        else:
+            try:
+                rel_path = datos_file.parent.relative_to(input_path)
+                sub_name = datos_file.parent.name if str(rel_path) == "." else rel_path
+            except ValueError:
+                sub_name = datos_file.parent.name
+
+            if args.output_dir:
+                output_path = Path(args.output_dir).resolve() / sub_name
+            else:
+                output_path = PROJECT_ROOT / "data" / "rebound_output" / sub_name
+
+        idx_label = f"[{idx}/{total_datasets} - {datos_file.parent.name}]"
+        simulate_single_dataset(datos_file, output_path, args, index_info=idx_label)
+        print()
+
+    total_elapsed = time.perf_counter() - t_global_start
+    print("=" * 80)
+    print(f"🎉 TODAS AS SIMULAÇÕES FORAM CONCLUÍDAS COM SUCESSO! ({total_datasets} conjuntos em {total_elapsed:.1f} s)")
     print("=" * 80)
 
 

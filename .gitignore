@@ -24,6 +24,10 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
+# Scripts de uso pessoal / auditoria local
+scripts/verify_confronto.py
+verify_confronto.py
+
 # IDE e sistema operacional
 .vscode/
 .idea/

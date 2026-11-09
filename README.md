@@ -114,10 +114,15 @@ pytest tests/ -v
 ```
 
 ### 4. Executar o Simulador Orbital (Substituto Direto do EVORB15)
-Para rodar a simulação para qualquer pasta contendo `datos.dat`:
+O simulador suporta tanto a execução pontual quanto a **descoberta recursiva automática em lote** (`rglob`), entrando em subpastas em qualquer nível de profundidade:
 ```bash
+# Execução de uma pasta individual:
 python scripts/run_simulation.py -i data/evorb_raw/datos1
+
+# Varredura recursiva em lote (processa todos os datos.dat em todas as subpastas):
+python scripts/run_simulation.py -i data/evorb_raw
 ```
+* **Descoberta Recursiva Inteligente:** Se você apontar para um diretório pai com múltiplos lotes (ex: `datos1`, `datos2`, ..., `datos21`), o script cataloga todos os arquivos `datos.dat` recursivamente e processa cada um sequencialmente em `data/rebound_output/<subpasta>/`.
 * **Resolução Temporal:** Lê automaticamente o `tsal` do `datos.dat` (`0,001` anos = ~8,76 horas), gerando os 20.001 passos no tempo com fidelidade física absoluta aos encontros na esfera de Hill.
 * **Organização das Saídas:**
   * **`final/`**: Snapshots no tempo final ($T=20$). O `encuent.csv` é ordenado por **menor distância (`dist_km`)** para priorização de perigo de impacto.

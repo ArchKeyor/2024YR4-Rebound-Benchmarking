@@ -30,13 +30,29 @@ O simulador é composto por 3 módulos principais:
 
 ## 🚀 2. Guia de Execução Rápida
 
-### A) Execução Padrão
-Para rodar qualquer pasta contendo um arquivo `datos.dat`:
+### A) Modos de Execução: Individual ou Varredura Recursiva em Lote
+
+O OrbitREBOUND possui inteligência de descoberta de arquivos (`rglob`): você pode apontar para uma pasta individual ou para uma pasta raiz com centenas de subpastas aninhadas.
+
+#### 1. Execução Individual (Conjunto Único)
+Para rodar uma pasta específica contendo um `datos.dat`:
 ```bash
 python scripts/run_simulation.py -i data/evorb_raw/datos1
 ```
-* **O que acontece:** O simulador integra 20 anos no futuro para os 408 corpos (Sol + 8 planetas + 400 clones), processa a evolução orbital e salva os resultados em `data/rebound_output/datos1/`.
-* **Tempo de execução:** ~35 a 40 segundos.
+* **O que acontece:** O simulador processa os 408 corpos da pasta `datos1`, integrando pelo tempo definido e salvando em `data/rebound_output/datos1/`.
+
+#### 2. Execução em Lote por Descoberta Recursiva Automática
+Se você possui múltiplos experimentos ou pastas de dados (ex: `datos1`, `datos2`, ..., `datos21`, ou subníveis como `campanhas/2026/loteA/datos.dat`), basta passar o diretório pai:
+```bash
+python scripts/run_simulation.py -i data/evorb_raw
+# ou para qualquer pasta 'datos':
+python scripts/run_simulation.py -i caminho/para/datos
+```
+* **Como funciona o rastreamento recursivo:**
+  1. O simulador vasculha a pasta de entrada e **entra recursivamente em todas as subpastas e níveis de profundidade** procurando por arquivos `datos.dat`.
+  2. Apresenta um índice consolidado com todos os conjuntos encontrados na tela.
+  3. Executa as simulações sequencialmente em lote, preservando a integridade de cada conjunto.
+  4. Organiza automaticamente os resultados em `data/rebound_output/<nome_da_subpasta>/`, mantendo cada série de clones isolada e catalogada.
 
 ---
 
@@ -44,25 +60,31 @@ python scripts/run_simulation.py -i data/evorb_raw/datos1
 
 | Flag | Tipo | Padrão | Descrição |
 | :--- | :---: | :---: | :--- |
-| `-i`, `--input-dir` | `str` | `data/evorb_raw/datos1` | Pasta contendo o arquivo `datos.dat`. |
-| `-o`, `--output-dir` | `str` | `None` (automático) | Pasta onde as subpastas `final/` e `temporal/` serão criadas. |
+| `-i`, `--input-dir` | `str` | `data/evorb_raw/datos1` | Arquivo `datos.dat`, pasta individual ou pasta raiz para busca recursiva. |
+| `-o`, `--output-dir` | `str` | `None` (automático) | Pasta onde as saídas serão salvas (padrão: `data/rebound_output/`). |
 | `-y`, `--years` | `float` | `None` (lê do `.dat`) | Tempo de simulação em anos (ex: `-y 50.0` para 50 anos). |
 | `--dt-temporal` | `float` | `None` (lê do `.dat`) | Passo de amostragem na pasta `temporal/`. Por padrão lê exatamente o `tsal` do `datos.dat` (tipicamente `0.001` anos = ~8,76 horas). |
 
 #### Exemplos de comandos:
 
-1. **Execução Padrão com Resolução Física Total (`tsal = 0.001` anos):**
+1. **Varredura Recursiva Automática de Toda a Pasta de Dados:**
+   ```bash
+   python scripts/run_simulation.py -i data/evorb_raw
+   ```
+   *(Localiza e roda todos os `datos.dat` presentes em quaisquer subpastas de `data/evorb_raw`).*
+
+2. **Execução Padrão com Resolução Física Total (`tsal = 0.001` anos):**
    ```bash
    python scripts/run_simulation.py -i data/evorb_raw/datos1
    ```
    *(Lê o `tsal = 0.001` anos do arquivo original, executando os 20.001 passos de amostragem temporal com máxima fidelidade científica).*
 
-2. **Simular por 50 anos com saída personalizada:**
+3. **Simular por 50 anos com saída personalizada:**
    ```bash
    python scripts/run_simulation.py -i data/evorb_raw/datos2 -y 50.0 -o resultados/run_50anos
    ```
 
-3. **Simular com amostragem customizada (ex: a cada 36 dias para arquivos menores):**
+4. **Simular com amostragem customizada (ex: a cada 36 dias para arquivos menores):**
    ```bash
    python scripts/run_simulation.py -i data/evorb_raw/datos1 --dt-temporal 0.1
    ```
