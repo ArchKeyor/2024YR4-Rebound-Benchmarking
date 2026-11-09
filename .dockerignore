@@ -1,0 +1,32 @@
+# Ambiente virtual e caches
+venv/
+.env
+.git/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Saídas e arquivos pesados
+data/rebound_output/
+*.sal_Error.txt
+data_orbitas.sal
+xyzv.sal
+energia.sal
+*.7z
+*.zip
+
+# Scripts pessoais e checagens locais
+*verify*
+*confronto*
+check_*.py
+temp_*.*
+
+# IDEs e sistema operacional
+.vscode/
+.idea/
+*.swp
+desktop.ini
+Thumbs.db

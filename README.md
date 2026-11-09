@@ -4,6 +4,7 @@
 [![REBOUND 5.2.2](https://img.shields.io/badge/REBOUND-5.2.2-orange.svg)](https://rebound.readthedocs.io/)
 [![Integrator IAS15](https://img.shields.io/badge/Integrator-IAS15%20(15th%20order)-green.svg)](https://rebound.readthedocs.io/en/latest/integrators/#ias15)
 [![CI](https://github.com/ArchKeyor/2024YR4-Rebound-Benchmarking/actions/workflows/ci.yml/badge.svg)](https://github.com/ArchKeyor/2024YR4-Rebound-Benchmarking/actions/workflows/ci.yml)
+[![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](Dockerfile)
 [![License MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
 
 Projeto de pesquisa científica e engenharia de software focado na **transposição, modernização e validação cruzada (*benchmarking*) do experimento de dinâmica orbital do asteroide potencialmente perigoso (PHA) 2024 YR4** e de seus **400 clones orbitais**.
@@ -111,6 +112,13 @@ pip install -r requirements.txt
 ### 3. Executar a Suíte de Testes Automatizados (10/10)
 ```bash
 pytest tests/ -v
+```
+
+### 🐳 Alternativa: Execução em Container Isolado via Docker
+Para reproduzir o ambiente completo e rodar os testes sem instalar Python ou dependências na máquina:
+```bash
+docker build -t 2024yr4-rebound .
+docker run --rm 2024yr4-rebound
 ```
 
 ### 4. Executar o Simulador Orbital (Substituto Direto do EVORB15)

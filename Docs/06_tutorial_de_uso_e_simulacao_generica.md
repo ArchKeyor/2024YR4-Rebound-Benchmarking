@@ -89,6 +89,11 @@ python scripts/run_simulation.py -i caminho/para/datos
    python scripts/run_simulation.py -i data/evorb_raw/datos1 --dt-temporal 0.1
    ```
 
+5. **Execução Isolada via Docker (com montagem de volume para saídas locais):**
+   ```bash
+   docker run --rm -v "${PWD}/data:/app/data" 2024yr4-rebound python scripts/run_simulation.py -i data/evorb_raw/datos1
+   ```
+
 ---
 
 ## 🔬 3. Transparência Científica: Unidades, Conversões Físicas e Ordenação

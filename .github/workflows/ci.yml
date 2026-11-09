@@ -39,3 +39,18 @@ jobs:
       - name: Run test suite with pytest
         run: |
           pytest tests/ -v
+
+  docker-build:
+    name: Build & Verify Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t 2024yr4-rebound:latest .
+
+      - name: Run test suite inside container
+        run: |
+          docker run --rm 2024yr4-rebound:latest
