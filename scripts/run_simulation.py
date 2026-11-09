@@ -74,8 +74,8 @@ def parse_args():
     parser.add_argument(
         "--dt-temporal",
         type=float,
-        default=0.01,
-        help="Intervalo em anos para amostragem na pasta 'temporal/' (padrão: 0.01 ano = ~3.65 dias; use 0.001 para amostragem densa igual ao EVORB)"
+        default=None,
+        help="Intervalo em anos para amostragem na pasta 'temporal/' (padrão: lê exatamente o 'tsal' do datos.dat, tipicamente 0.001 ano = ~8.76 horas)"
     )
     return parser.parse_args()
 
@@ -136,7 +136,7 @@ def main():
     t_total_anos = args.years if args.years is not None else params.get("tmax_yr", 20.0)
     r_crit_min = params.get("rcrit1_au", 0.1)
     r_crit_max = params.get("rcrit2_au", 100.0)
-    dt_temp = max(0.0005, args.dt_temporal)
+    dt_temp = args.dt_temporal if args.dt_temporal is not None else params.get("tsal_yr", 0.001)
 
     # 2. Configura REBOUND com calibração gaussiana idêntica ao EVORB
     print(f"[2/4] Configurando REBOUND (IAS15, 15ª ordem, 8 planetas + {num_clones} clones)...")
@@ -204,8 +204,8 @@ def main():
     # Grava estado inicial t = 0.0 na pasta temporal/
     grava_snapshot_temporal(0.0, e_ini)
 
-    dt_step = min(0.01, dt_temp)
-    total_steps = int(math.ceil(t_total_anos / dt_step))
+    dt_step = dt_temp
+    total_steps = int(round(t_total_anos / dt_step))
     next_save_t = dt_temp
 
     last_d = {p["id"]: 999.0 for p in datos["particles"]}

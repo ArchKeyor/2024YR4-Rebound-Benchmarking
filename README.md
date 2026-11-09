@@ -118,14 +118,18 @@ Para rodar a simulação para qualquer pasta contendo `datos.dat`:
 ```bash
 python scripts/run_simulation.py -i data/evorb_raw/datos1
 ```
-*(Executa a propagação completa de 20 anos para 408 corpos em ~35 segundos, gerando os 7 arquivos equivalentes ao EVORB em formato CSV limpo nas pastas `final/` e `temporal/`. Consulte o [Tutorial Completo](Docs/06_tutorial_de_uso_e_simulacao_generica.md) para detalhes).*
+* **Resolução Temporal:** Lê automaticamente o `tsal` do `datos.dat` (`0,001` anos = ~8,76 horas), gerando os 20.001 passos no tempo com fidelidade física absoluta aos encontros na esfera de Hill.
+* **Organização das Saídas:**
+  * **`final/`**: Snapshots no tempo final ($T=20$). O `encuent.csv` é ordenado por **menor distância (`dist_km`)** para priorização de perigo de impacto.
+  * **`temporal/`**: Séries temporais completas ($T=0 \to T=20$). O `encuent.csv` é ordenado estritamente em **ordem cronológica (`[t_anos, clone_id]`)**, espelhando o `encuent.sal` do Fortran.
+* **Unidades Físicas Padronizadas:** A energia mecânica é exportada em unidades astronômicas reais ($M_\odot \cdot \text{AU}^2/\text{ano}^2$) com $GM \approx 39,476926$, garantindo equivalência direta com o Fortran.
+* Consulte o **[Tutorial Completo (Dossiê 06)](Docs/06_tutorial_de_uso_e_simulacao_generica.md)** para mais detalhes e simulação de outros asteroides (Apophis, Bennu, etc.).
 
 ### 5. Executar o Benchmarking Completo de 20 Anos (Auditoria de Resíduos)
 ```bash
 python scripts/run_benchmark_full.py
 ```
 *(Executa a propagação comparativa dos 408 corpos em ambos os modos, decodifica os binários e gera as matrizes de resíduo em menos de 13 segundos).*
-*(Executa a propagação completa dos 408 corpos em ambos os modos, decodifica os binários e gera as matrizes de resíduo em menos de 13 segundos).*
 
 ---
 

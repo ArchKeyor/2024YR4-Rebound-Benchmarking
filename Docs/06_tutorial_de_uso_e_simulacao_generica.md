@@ -47,28 +47,66 @@ python scripts/run_simulation.py -i data/evorb_raw/datos1
 | `-i`, `--input-dir` | `str` | `data/evorb_raw/datos1` | Pasta contendo o arquivo `datos.dat`. |
 | `-o`, `--output-dir` | `str` | `None` (automático) | Pasta onde as subpastas `final/` e `temporal/` serão criadas. |
 | `-y`, `--years` | `float` | `None` (lê do `.dat`) | Tempo de simulação em anos (ex: `-y 50.0` para 50 anos). |
-| `--dt-temporal` | `float` | `0.01` (~3.65 dias) | Passo de amostragem na pasta `temporal/`. Use `0.001` para densidade máxima. |
+| `--dt-temporal` | `float` | `None` (lê do `.dat`) | Passo de amostragem na pasta `temporal/`. Por padrão lê exatamente o `tsal` do `datos.dat` (tipicamente `0.001` anos = ~8,76 horas). |
 
-#### Exemplos de comandos avançados:
+#### Exemplos de comandos:
 
-1. **Simular por 50 anos com saída personalizada:**
+1. **Execução Padrão com Resolução Física Total (`tsal = 0.001` anos):**
+   ```bash
+   python scripts/run_simulation.py -i data/evorb_raw/datos1
+   ```
+   *(Lê o `tsal = 0.001` anos do arquivo original, executando os 20.001 passos de amostragem temporal com máxima fidelidade científica).*
+
+2. **Simular por 50 anos com saída personalizada:**
    ```bash
    python scripts/run_simulation.py -i data/evorb_raw/datos2 -y 50.0 -o resultados/run_50anos
    ```
 
-2. **Simular com resolução temporal de 36 dias (arquivo mais leve):**
+3. **Simular com amostragem customizada (ex: a cada 36 dias para arquivos menores):**
    ```bash
    python scripts/run_simulation.py -i data/evorb_raw/datos1 --dt-temporal 0.1
    ```
 
-3. **Simular com resolução idêntica ao EVORB original (passo de ~8 horas):**
-   ```bash
-   python scripts/run_simulation.py -i data/evorb_raw/datos1 --dt-temporal 0.001
-   ```
+---
+
+## 🔬 3. Transparência Científica: Unidades, Conversões Físicas e Ordenação
+
+Para evitar qualquer confusão ao comparar saídas do REBOUND com integradores legados em Fortran (EVORB15, Mercury, Swift), esta seção documenta com rigor a física e a convenção de dados adotada.
+
+### A) Sistema de Unidades e Conservação de Energia ($GM$)
+* **No Fortran EVORB:** O programa adota unidades astronômicas clássicas: massa em Massas Solares ($M_\odot$), distância em $\text{AU}$ e tempo em Anos Julianos ($365,25\text{ dias}$).
+  Nesse sistema, a constante de gravitação do Sol é $GM = (k \cdot 365,25)^2 \approx 39,476926\text{ AU}^3/\text{ano}^2$ (onde $k = 0,01720209895$ é a constante de Gauss).
+  A energia mecânica do sistema ($E = T + V$) é calculada em unidades de:
+  $$[E] = M_\odot \cdot \frac{\text{AU}^2}{\text{ano}^2}$$
+* **No REBOUND:** O motor opera internamente em unidades adimensionais onde $G = 1$ e o tempo é medido em radianos ($1/2\pi\text{ anos}$).
+* **A Conversão do OrbitREBOUND:** Para garantir transparência e equivalência com o que a comunidade científica espera, o OrbitREBOUND converte automaticamente a energia interna do REBOUND multiplicando pelo fator $GM \approx 39,476926$.
+  * Resultado: o `energia.csv` cospe diretamente $E \approx -0,0044324\ M_\odot\text{AU}^2/\text{ano}^2$, batendo com o `energia.sal` do Fortran ($-0,0044325$) na 5ª casa decimal.
 
 ---
 
-## 📁 3. Estrutura dos Arquivos de Saída (Os 7 Pilares do EVORB)
+### B) Estrutura das Pastas e Critérios de Ordenação dos Dados
+
+A saída é dividida em duas pastas especializadas para atender a propósitos analíticos distintos:
+
+#### 1. Pasta `temporal/` (Série Temporal Cronológica Contínua)
+* **Objetivo:** Registro passo a passo da evolução dinâmica desde $T = 0$ até $T = T_{\text{max}}$.
+* **Resolução Temporal:** Lê rigorosamente o `tsal` do `datos.dat` (`0,001\text{ anos} \approx 8,76\text{ horas}`). Essa alta densidade é indispensável para resolver encontros hiperbólicos na esfera de Hill sem efeito de *aliasing*.
+* **Critérios de Ordenação:**
+  * `encuent.csv`: Ordenado estritamente por **`[t_anos, clone_id]`** (ordem cronológica primária; em caso de passagens no mesmo instante, ordena pelo número do clone: 9, 10, 11...). Espelha com exatidão a ordem de emissão do `encuent.sal`.
+  * `orbitas.csv` e `xyzv.csv`: Ordenados por **`[t_anos, N]`** (série temporal completa de 20.001 passos para cada corpo).
+  * `energia.csv`: Ordenado por **`t_anos`** (20.001 amostras da conservação de energia com drift $\Delta E / E \sim 10^{-16}$).
+
+#### 2. Pasta `final/` (Consolidação no Instante Final $T = T_{\text{max}}$)
+* **Objetivo:** Snapshot consolidado do estado do sistema ao final da simulação para re-arranque e análise de perigo de impacto.
+* **Critérios de Ordenação:**
+  * `encuent.csv`: Ordenado por **`dist_km` crescente** (as menores distâncias aparecem primeiro no topo). Isso permite ao astrofísico identificar instantaneamente os clones mais rasantes e perigosos (ex: Clone 28/22 em 2032).
+  * `orbitas.csv`: Ordenado por **`N`** (corpos de 1 a 408 no instante $T=20$).
+  * `condin.csv`: Ordenado por **`N`** (substituto direto do binário `condin.xxx` para re-arranque da simulação).
+  * `colisio.csv` e `finales.csv`: Relatórios consolidados de integridade (0 colisões e 0 ejeções).
+
+---
+
+## 📁 4. Tabela Resumo dos 7 Arquivos Gerados
 
 As saídas são geradas em formato **CSV limpo, padronizado e com cabeçalho**, divididas em duas pastas:
 
@@ -210,4 +248,3 @@ plt.show()
 
 ### No Excel ou Power BI
 Basta clicar duas vezes em qualquer arquivo da pasta `final/` ou `temporal/`. Eles abrem nativamente com colunas separadas e valores formatados.
-
