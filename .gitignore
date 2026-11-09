@@ -17,18 +17,30 @@ data/evorb_raw/datos1/data_orbitas.sal
 data/evorb_raw/datos1/xyzv.sal
 data/evorb_raw/datos1/energia.sal
 
-# Python e caches
+# Scripts de uso pessoal / auditoria local e checagens temporarias
+*verify*
+*confronto*
+check_*.py
+temp_*.py
+temp_*.json
+
+# Typecheckers, Linters e Caches
 __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.pyre/
+.pyrefly/
+node_modules/
 
-# Scripts de uso pessoal / auditoria local
-scripts/verify_confronto.py
-verify_confronto.py
-
-# IDE e sistema operacional
+# Logs e arquivos temporarios
+*.log
+*.tmp
+*.bak
+.coverage
+htmlcov/
 .vscode/
 .idea/
 *.swp
