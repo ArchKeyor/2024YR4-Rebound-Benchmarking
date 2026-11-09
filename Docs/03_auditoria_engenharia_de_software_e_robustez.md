@@ -161,7 +161,7 @@ A confiabilidade contínua da base de código é garantida por **10 testes autom
 ```
 ============================= test session starts =============================
 platform win32 -- Python 3.12.10, pytest-9.2.0, pluggy-1.7.0
-rootdir: 2024YR4-Rebound-Benchmarking
+rootdir: orbit-rebound
 
 tests/test_parsers.py::test_clean_fortran_float PASSED                   [ 10%]
 tests/test_parsers.py::test_calculate_position_residual PASSED           [ 20%]

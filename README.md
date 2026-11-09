@@ -3,7 +3,7 @@
 [![Python 3.12](https://img.shields.io/badge/Python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![REBOUND 5.2.2](https://img.shields.io/badge/REBOUND-5.2.2-orange.svg)](https://rebound.readthedocs.io/)
 [![Integrator IAS15](https://img.shields.io/badge/Integrator-IAS15%20(15th%20order)-green.svg)](https://rebound.readthedocs.io/en/latest/integrators/#ias15)
-[![CI Suite](https://github.com/ArchKeyor/2024YR4-Rebound-Benchmarking/actions/workflows/ci.yml/badge.svg)](https://github.com/ArchKeyor/2024YR4-Rebound-Benchmarking/actions/workflows/ci.yml)
+[![CI Suite](https://github.com/ArchKeyor/orbit-rebound/actions/workflows/ci.yml/badge.svg)](https://github.com/ArchKeyor/orbit-rebound/actions/workflows/ci.yml)
 [![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](Dockerfile)
 [![License MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
 
@@ -54,7 +54,8 @@ O repositório contém uma suíte exaustiva de dossiês formais na pasta [`Docs/
 ## 🏗️ Arquitetura do Repositório
 
 ```
-2024YR4-Rebound-Benchmarking/
+orbit-rebound/
+├── .github/workflows/          # Pipeline de CI/CD automatizado (Linux & Windows)
 ├── Docs/                       # Dossiês formais de auditoria técnica e benchmarking
 │   ├── 01_plano_de_execucao_da_transposicao.md
 │   ├── 02_auditoria_matematica_e_ciencias.md
@@ -94,8 +95,8 @@ O repositório contém uma suíte exaustiva de dossiês formais na pasta [`Docs/
 
 ### 1. Clonar o Repositório e Criar Ambiente Virtual
 ```bash
-git clone https://github.com/ArchKeyor/2024YR4-Rebound-Benchmarking.git
-cd 2024YR4-Rebound-Benchmarking
+git clone https://github.com/ArchKeyor/orbit-rebound.git
+cd orbit-rebound
 
 python -m venv venv
 # No Windows PowerShell:

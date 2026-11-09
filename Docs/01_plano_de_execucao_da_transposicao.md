@@ -63,7 +63,7 @@ flowchart TD
 
 ### Estrutura de Diretórios do Repositório
 ```
-2024YR4-Rebound-Benchmarking/
+orbit-rebound/
 ├── data/
 │   ├── evorb_raw/
 │   │   └── datos1/             # Entradas e gabaritos originais do EVORB (.dat, .xxx, .sal, .for)
