@@ -50,3 +50,7 @@ htmlcov/
 *.swp
 desktop.ini
 Thumbs.db
+
+# Artigos e PDFs de referências (preservados localmente no disco)
+references/*.pdf
+

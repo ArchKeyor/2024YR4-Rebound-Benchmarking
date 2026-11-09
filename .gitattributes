@@ -3,3 +3,4 @@
 # para que o GitHub reconheça o software desenvolvido como 100% Python.
 data/evorb_raw/** linguist-vendored
 *.for linguist-vendored
+
