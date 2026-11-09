@@ -20,7 +20,7 @@ O código legado em Fortran apresentava limitações severas de manutenção con
 3. Ausência de paralelismo moderno e lentidão na propagação temporal.
 
 ### A Missão
-Construir uma infraestrutura modular moderna em **Python e C** utilizando o motor **REBOUND (IAS15)**, transpondo perfeitamente o experimento histórico de 20 anos ($2024 \to 2044$), decodificando as entradas originais com fidelidade matemática e demonstrando, por equivalência analítica e empírica, a identidade dos resultados produzidos.
+Construir uma infraestrutura modular moderna em **Python e C** utilizando o motor **REBOUND (IAS15)**, transpondo o experimento histórico de 20 anos ($2024 \to 2044$), decodificando as entradas originais com fidelidade matemática e demonstrando, por equivalência analítica e empírica, a identidade dos resultados produzidos.
 
 ---
 
@@ -131,7 +131,7 @@ A transposição foi planejada e executada rigorosamente em 4 fases sequenciais:
 ### Fase 3: Benchmarking Numérico, Análise Residual e Descoberta de Gauss
 * **3.1 Confronto do Vetor de Estado em $T = 20,0\text{ Anos}$:**
   * Comparação das posições e velocidades heliocêntricas calculadas pelo REBOUND contra o gabarito binário `condin.xxx` do EVORB15.
-* **3.2 A Grande Descoberta da Constante de Gauss ($k$):**
+* **3.2 Calibração da Constante Gravitacional de Gauss ($k$):**
   * Identificação da raiz da divergência métrica inicial: a diferença entre a constante gaussiana $GM = (k \cdot 365,25)^2$ usada no Fortran e o ano juliano puro $(2\pi)^2$ usado no REBOUND padrão.
   * Implementação da opção `--use-evorb-k`, provocando o colapso do erro da Terra de $813.474\text{ km}$ para apenas $8.574\text{ km}$ ($94,9\times$ de melhoria).
 * **3.3 Validação dos Eventos Críticos:**

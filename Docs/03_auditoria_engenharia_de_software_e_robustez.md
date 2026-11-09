@@ -27,9 +27,9 @@ Os compiladores Fortran (como g77, Intel Fortran ou Compaq Visual Fortran) grava
 $$\text{[Marker: 4 bytes]} \quad \text{[Dados Úteis: } N \text{ bytes]} \quad \text{[Marker: 4 bytes]}$$
 
 ### 2.2 Implementação Nativa em Python (Zero Dependências)
-Para eliminar qualquer dependência de ferramentas frágeis como `f2py` ou compiladores `gfortran` na máquina do usuário, implementamos um leitor binário puro em [`src/parsers/evorb_parser.py`](file:///C:/Users/Kauê/Documents/02_Programacao_e_Tech/Projetos/2024YR4-Rebound-Benchmarking/src/parsers/evorb_parser.py) utilizando exclusivamente a biblioteca padrão `struct`.
+Para eliminar qualquer dependência de ferramentas frágeis como `f2py` ou compiladores `gfortran` na máquina do usuário, implementamos um leitor binário puro em [`src/parsers/evorb_parser.py`](../src/parsers/evorb_parser.py) utilizando exclusivamente a biblioteca padrão `struct`.
 
-O layout físico do arquivo [`condin.xxx`](file:///C:/Users/Kauê/Documents/02_Programacao_e_Tech/Projetos/2024YR4-Rebound-Benchmarking/data/evorb_raw/datos1/condin.xxx) foi dissecado byte a byte:
+O layout físico do arquivo [`condin.xxx`](../data/evorb_raw/datos1/condin.xxx) foi dissecado byte a byte:
 * **Registro 1 (Parâmetros Globais - 16 bytes):**
   * Marcador de abertura: `0x10 0x00 0x00 0x00` ($16\text{ bytes}$).
   * `t` (`float64` - 8 bytes): tempo decorrido ($20,0\text{ anos}$).
@@ -101,17 +101,17 @@ def _init_simulation(self):
 Sempre que `setup_from_datos()` é invocado, o ponteiro da simulação anterior é explicitamente destruído, acionando o coletor de lixo e liberando a memória do C-Core antes da nova alocação.
 
 ### 4.3 Teste de Estresse de Idempotência (3 Ciclos Consecutivos)
-No script [`scripts/test_stress_robustness.py`](file:///C:/Users/Kauê/Documents/02_Programacao_e_Tech/Projetos/2024YR4-Rebound-Benchmarking/scripts/test_stress_robustness.py), submetemos a mesma instância a três chamadas sucessivas de setup completo:
+No script [`scripts/test_stress_robustness.py`](../scripts/test_stress_robustness.py), submetemos a mesma instância a três chamadas sucessivas de setup completo:
 * **Ciclo 1:** Total de corpos $= 409$ | Corpos ativos $= 9$ | Alinhamento $=$ `True`
 * **Ciclo 2:** Total de corpos $= 409$ | Corpos ativos $= 9$ | Alinhamento $=$ `True`
 * **Ciclo 3:** Total de corpos $= 409$ | Corpos ativos $= 9$ | Alinhamento $=$ `True`
-* **Veredito:** ✅ **Idempotência absoluta comprovada.** Zero corpos duplicados.
+* **Veredito:** ✅ **Idempotência confirmada.** Zero corpos duplicados.
 
 ---
 
 ## ⚡ 5. Programação Defensiva e Falha Rápida (*Fail-Fast*)
 
-O software foi blindado contra erros humanos de operação através de travas defensivas explícitas:
+O software foi blindado contra erros operacionais através de travas defensivas explícitas:
 
 1. **Proteção de Pré-Condição de Estado:**
    * Tentar executar `integrate_years()` ou extrair órbitas com `get_heliocentric_states()` antes de invocar `setup_from_datos()` interrompe a execução imediatamente:
@@ -126,7 +126,7 @@ O software foi blindado contra erros humanos de operação através de travas de
          raise ValueError(f"Período de integração deve ser positivo, recebido: {years}")
      ```
 3. **Proteção Dimensional em Métricas:**
-   * As funções matemáticas de resíduos em [`src/analysis/metrics.py`](file:///C:/Users/Kauê/Documents/02_Programacao_e_Tech/Projetos/2024YR4-Rebound-Benchmarking/src/analysis/metrics.py) validam as dimensões dos vetores antes do cálculo:
+   * As funções matemáticas de resíduos em [`src/analysis/metrics.py`](../src/analysis/metrics.py) validam as dimensões dos vetores antes do cálculo:
      ```python
      if pos1.shape != pos2.shape:
          raise ValueError(f"Dimensões incompatíveis para resíduo de posição: {pos1.shape} vs {pos2.shape}")
@@ -144,7 +144,7 @@ Realizamos a varredura completa de todos os vetores de estado $(x, y, z, v_x, v_
 * Total de escalares de ponto flutuante auditados: **$2.448$ grandezas**.
 * Quantidade de `NaN` detectados: **`0`**
 * Quantidade de `Inf` detectados: **`0`**
-* **Veredito:** ✅ **Estabilidade numérica inabalável.**
+* **Veredito:** ✅ **Estabilidade numérica estrita.**
 
 ### 6.2 Teste de Integração Fatiada (Continuidade dos Nós de Gauss-Radau)
 O solver `IAS15` utiliza um esquema preditor-corretor de 15 nós. Pausar e retomar a simulação em múltiplos instantes poderia romper a continuidade das derivadas de alta ordem.
@@ -161,7 +161,7 @@ A confiabilidade contínua da base de código é garantida por **10 testes autom
 ```
 ============================= test session starts =============================
 platform win32 -- Python 3.12.10, pytest-9.2.0, pluggy-1.7.0
-rootdir: C:\Users\Kauê\Documents\02_Programacao_e_Tech\Projetos\2024YR4-Rebound-Benchmarking
+rootdir: 2024YR4-Rebound-Benchmarking
 
 tests/test_parsers.py::test_clean_fortran_float PASSED                   [ 10%]
 tests/test_parsers.py::test_calculate_position_residual PASSED           [ 20%]

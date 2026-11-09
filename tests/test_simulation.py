@@ -8,7 +8,8 @@ import numpy as np
 from src.parsers.evorb_parser import parse_datos
 from src.simulation.rebound_runner import ReboundExperimentRunner
 
-DATOS1_PATH = Path("C:/Users/Kauê/Documents/02_Programacao_e_Tech/Projetos/2024YR4-Rebound-Benchmarking/data/evorb_raw/datos1/datos.dat")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATOS1_PATH = PROJECT_ROOT / "data" / "evorb_raw" / "datos1" / "datos.dat"
 
 
 def test_rebound_runner_setup_and_short_integration():
@@ -157,7 +158,7 @@ def test_rebound_runner_gaussian_calibration():
     from src.parsers.evorb_parser import parse_condin_binary
     from src.analysis.metrics import calculate_position_residual
 
-    condin_path = Path("C:/Users/Kauê/Documents/02_Programacao_e_Tech/Projetos/2024YR4-Rebound-Benchmarking/data/evorb_raw/datos1/condin.xxx")
+    condin_path = PROJECT_ROOT / "data" / "evorb_raw" / "datos1" / "condin.xxx"
     if not condin_path.exists():
         pytest.skip("condin.xxx não encontrado.")
 

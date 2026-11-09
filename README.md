@@ -1,9 +1,9 @@
 # 🚀 2024 YR4: Transposição e Benchmarking Orbital (EVORB15 vs. REBOUND)
 
-[![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
+[![Python 3.12](https://img.shields.io/badge/Python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![REBOUND 5.2.2](https://img.shields.io/badge/REBOUND-5.2.2-orange.svg)](https://rebound.readthedocs.io/)
 [![Integrator IAS15](https://img.shields.io/badge/Integrator-IAS15%20(15th%20order)-green.svg)](https://rebound.readthedocs.io/en/latest/integrators/#ias15)
-[![Tests Passing](https://img.shields.io/badge/Tests-10%2F10%20Passed-brightgreen.svg)](tests/)
+[![CI](https://github.com/ArchKeyor/2024YR4-Rebound-Benchmarking/actions/workflows/ci.yml/badge.svg)](https://github.com/ArchKeyor/2024YR4-Rebound-Benchmarking/actions/workflows/ci.yml)
 [![License MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
 
 Projeto de pesquisa científica e engenharia de software focado na **transposição, modernização e validação cruzada (*benchmarking*) do experimento de dinâmica orbital do asteroide potencialmente perigoso (PHA) 2024 YR4** e de seus **400 clones orbitais**.
@@ -12,7 +12,7 @@ O experimento original foi desenvolvido pelo Prof. Tabaré Gallardo no solver le
 
 ---
 
-## 🏆 Principais Conquistas & Resultados
+## 📊 Validação Numérica e Métricas de Benchmark
 
 | Eixo de Avaliação | EVORB15 (Fortran 77, 2009) | REBOUND IAS15 (Modernizado, 2026) | Concordância Científica |
 |---|:---:|:---:|:---:|
@@ -27,7 +27,7 @@ O experimento original foi desenvolvido pelo Prof. Tabaré Gallardo no solver le
 
 ---
 
-## 🔬 A Grande Descoberta: Calibração da Constante de Gauss ($k$)
+## 🔬 Investigação Numérica: Calibração da Constante Gravitacional de Gauss ($k$)
 
 A investigação de engenharia reversa no código Fortran (`evorb15corr.for:103`) descobriu que o EVORB adotava a constante gravitacional de Gauss $k = 0,01720209895$, resultando em $GM = (k \cdot 365,25)^2 \approx 39,476926$, enquanto o REBOUND padrão assume $(2\pi)^2 \approx 39,478418$.
 
@@ -123,7 +123,7 @@ python scripts/run_simulation.py -i data/evorb_raw/datos1
 python scripts/run_simulation.py -i data/evorb_raw
 ```
 * **Descoberta Recursiva Inteligente:** Se você apontar para um diretório pai com múltiplos lotes (ex: `datos1`, `datos2`, ..., `datos21`), o script cataloga todos os arquivos `datos.dat` recursivamente e processa cada um sequencialmente em `data/rebound_output/<subpasta>/`.
-* **Resolução Temporal:** Lê automaticamente o `tsal` do `datos.dat` (`0,001` anos = ~8,76 horas), gerando os 20.001 passos no tempo com fidelidade física absoluta aos encontros na esfera de Hill.
+* **Resolução Temporal:** Lê automaticamente o `tsal` do `datos.dat` (`0,001` anos = ~8,76 horas), gerando os 20.001 passos no tempo com fidelidade analítica estrita aos encontros na esfera de Hill.
 * **Organização das Saídas:**
   * **`final/`**: Snapshots no tempo final ($T=20$). O `encuent.csv` é ordenado por **menor distância (`dist_km`)** para priorização de perigo de impacto.
   * **`temporal/`**: Séries temporais completas ($T=0 \to T=20$). O `encuent.csv` é ordenado estritamente em **ordem cronológica (`[t_anos, clone_id]`)**, espelhando o `encuent.sal` do Fortran.

@@ -28,7 +28,7 @@ Na física computacional e na mecânica celeste, um modelo de simulação não p
 ```
 
 ### 1. Âncora 1: O Gabarito Histórico Cego (`condin.xxx` de 2009)
-* O arquivo binário [`condin.xxx`](file:///C:/Users/Kauê/Documents/02_Programacao_e_Tech/Projetos/2024YR4-Rebound-Benchmarking/data/evorb_raw/datos1/condin.xxx) foi gerado há quase duas décadas por um executável Fortran 77 compilado independentemente.
+* O arquivo binário [`condin.xxx`](../data/evorb_raw/datos1/condin.xxx) foi gerado há quase duas décadas por um executável Fortran 77 compilado independentemente.
 * Ele funciona como um *teste cego*: qualquer desvio na interpretação das épocas, na orientação dos eixos cartesianos, nas massas planetárias ou no escalonamento temporal levaria a trajetórias que divergiriam macroscopicamente ao longo de 20 anos de integração.
 
 ### 2. Âncora 2: Leis de Conservação e Invariantes da Física (Noether)
@@ -56,7 +56,7 @@ Todo o alinhamento cinemático entre o EVORB15 e o REBOUND é governado por dedu
   * Unidade temporal no REBOUND (`yr2pi`): $1\text{ ano juliano} = 2\pi\text{ rad}$.
 * **Fórmula Fundamental de Alinhamento:**
   $$\tau_{\text{alinhamento}} = \left( \frac{9.200,0}{365,25} \right) \times 2\pi = 25,1882272416\dots \times 2\pi \approx \mathbf{158,2622993184\text{ rad}}$$
-* **Implementação:** [`rebound_runner.py`](file:///C:/Users/Kauê/Documents/02_Programacao_e_Tech/Projetos/2024YR4-Rebound-Benchmarking/src/simulation/rebound_runner.py), linha 68.
+* **Implementação:** [`rebound_runner.py`](../src/simulation/rebound_runner.py), linha 68.
 
 ### 2. Translação do Referencial Inercial (Baricêntrico $\to$ Heliocêntrico)
 * O REBOUND integra as equações diferenciais em coordenadas inerciais relativas ao Baricentro do Sistema Solar ($\vec{R}_{\text{COM}} = \vec{0}$).
@@ -197,7 +197,7 @@ Com o erro de fase gaussiano eliminado, o resíduo restante em Mercúrio é de a
 
 ---
 
-## 🏆 Veredito Final da Auditoria Científica
+## 📋 Conclusão da Auditoria Científica
 
-A convergência dos três domínios e das três âncoras comprova, com rigor matemático absoluto, que a física do experimento foi compreendida, decodificada e replicada com perfeição.
+A convergência dos três domínios e das três âncoras valida analiticamente que a dinâmica do experimento foi decodificada e reproduzida com rigor dentro das tolerâncias estipuladas.
 

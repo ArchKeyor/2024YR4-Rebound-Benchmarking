@@ -63,7 +63,7 @@ gr = rebx.load_force("general_relativity")
 rebx.add_force(gr)
 gr.params["c"] = 10065.32  # Velocidade da luz nas unidades AU e yr2pi
 ```
-* **Impacto Esperado:** Colapso total do resíduo de Mercúrio para menos de $1.000\text{ km}$, atingindo congruência absoluta até a última casa decimal em relação ao modelo de Gallardo-Venturini.
+* **Impacto Esperado:** Redução do resíduo de Mercúrio para menos de $1.000\text{ km}$, alcançando convergência em relação ao modelo de Gallardo-Venturini.
 
 ---
 
