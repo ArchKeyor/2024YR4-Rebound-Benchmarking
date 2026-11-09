@@ -1,0 +1,5 @@
+# Configurações do GitHub Linguist
+# Marca código legado de terceiros e dados brutos de benchmark como "vendored"
+# para que o GitHub reconheça o software desenvolvido como 100% Python.
+data/evorb_raw/** linguist-vendored
+*.for linguist-vendored
