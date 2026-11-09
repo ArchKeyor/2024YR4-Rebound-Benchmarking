@@ -23,6 +23,10 @@ data/evorb_raw/datos1/energia.sal
 check_*.py
 temp_*.py
 temp_*.json
+PROXIMOS_OBJETIVOS.md
+*roadmap*
+*objetivo*
+TODO*.md
 
 # Typecheckers, Linters e Caches
 __pycache__/
