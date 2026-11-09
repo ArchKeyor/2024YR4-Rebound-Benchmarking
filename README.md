@@ -3,7 +3,7 @@
 [![Python 3.12](https://img.shields.io/badge/Python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![REBOUND 5.2.2](https://img.shields.io/badge/REBOUND-5.2.2-orange.svg)](https://rebound.readthedocs.io/)
 [![Integrator IAS15](https://img.shields.io/badge/Integrator-IAS15%20(15th%20order)-green.svg)](https://rebound.readthedocs.io/en/latest/integrators/#ias15)
-[![CI](https://github.com/ArchKeyor/2024YR4-Rebound-Benchmarking/actions/workflows/ci.yml/badge.svg)](https://github.com/ArchKeyor/2024YR4-Rebound-Benchmarking/actions/workflows/ci.yml)
+[![CI Suite](https://github.com/ArchKeyor/2024YR4-Rebound-Benchmarking/actions/workflows/ci.yml/badge.svg)](https://github.com/ArchKeyor/2024YR4-Rebound-Benchmarking/actions/workflows/ci.yml)
 [![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](Dockerfile)
 [![License MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
 

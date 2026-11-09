@@ -16,3 +16,4 @@ COPY . .
 
 # Comando padrão: executa a suíte automatizada de testes
 CMD ["pytest", "tests/", "-v"]
+
