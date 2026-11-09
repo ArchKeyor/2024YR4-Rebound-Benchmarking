@@ -1,4 +1,4 @@
-# 🚀 2024 YR4: Transposição e Benchmarking Orbital (EVORB15 vs. REBOUND)
+# 🪐 OrbitREBOUND: Modernização e Benchmarking de Dinâmica Orbital (Fortran 77 → Python/C)
 
 [![Python 3.12](https://img.shields.io/badge/Python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![REBOUND 5.2.2](https://img.shields.io/badge/REBOUND-5.2.2-orange.svg)](https://rebound.readthedocs.io/)
@@ -7,9 +7,9 @@
 [![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](Dockerfile)
 [![License MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
 
-Projeto de pesquisa científica e engenharia de software focado na **transposição, modernização e validação cruzada (*benchmarking*) do experimento de dinâmica orbital do asteroide potencialmente perigoso (PHA) 2024 YR4** e de seus **400 clones orbitais**.
+O **OrbitREBOUND** é uma ferramenta de simulação N-corpos e modernização computacional para o solver legado **EVORB15** (Prof. Tabaré Gallardo, 2009). Desenvolvido em Python e C sobre o integrador Gauss-Radau IAS15 de 15ª ordem, o projeto realiza **engenharia reversa de formatos binários Fortran não formatados**, calibração de constantes gravitacionais e paralelização de partículas de teste com ganho de velocidade de até **$40\times$**.
 
-O experimento original foi desenvolvido pelo Prof. Tabaré Gallardo no solver legado **EVORB15** (compilado em Fortran 77 com o algoritmo RADAU15 de 15ª ordem). Este projeto reconstituiu toda a física do sistema no motor moderno **REBOUND** (solver Gauss-Radau IAS15 em C acoplado a Python), demonstrando equivalência analítica e numérica rigorosa.
+Como validação experimental e caso de estudo (*benchmarking*), o sistema reconstitui a propagação orbital de 20 anos ($2024 \to 2044$) do asteroide potencialmente perigoso (PHA) **2024 YR4** e de seus **400 clones de incerteza**, comprovando equivalência numérica e física com o software original.
 
 ---
 
