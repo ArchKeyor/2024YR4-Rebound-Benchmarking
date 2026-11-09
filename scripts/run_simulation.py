@@ -163,13 +163,17 @@ def main():
     f_ene = open(temporal_dir / "energia.csv", "w", encoding="utf-8", buffering=64 * 1024)
     f_ene.write("t_anos,energia_total,energia_cinetica,energia_potencial,delta_e_relativo\n")
 
+    # Fator de conversão da constante de Gauss para unidades físicas (Massa Solar * AU^2 / ano^2)
+    # No Fortran EVORB: GM = (k * 365.25)^2 ≈ 39.476926
+    gm_factor = (0.01720209895 * 365.25)**2
+
     def grava_snapshot_temporal(t_val, e_base):
         sol_now = sim.particles[0]
-        # Energia
+        # Energia em unidades físicas idênticas ao EVORB (AU^2 / ano^2)
         e_now = sim.energy()
         t_kin = 0.5 * sum(sim.particles[k].m * (sim.particles[k].vx**2 + sim.particles[k].vy**2 + sim.particles[k].vz**2) for k in range(9))
         de_rel = abs((e_now - e_base) / e_base) if abs(e_base) > 1e-15 else 0.0
-        f_ene.write(f"{t_val:.4f},{e_now:.12f},{t_kin:.12f},{e_now - t_kin:.12f},{de_rel:.6e}\n")
+        f_ene.write(f"{t_val:.4f},{e_now * gm_factor:.12f},{t_kin * gm_factor:.12f},{(e_now - t_kin) * gm_factor:.12f},{de_rel:.6e}\n")
 
         # Orbitas e Coordenadas para cada corpo
         for k in range(1, sim.N):
@@ -337,7 +341,7 @@ def main():
         columns=["t_anos", "clone_id", "data_estimada", "dist_raios_terra", "dist_km", "vel_rel_kms"]
     )
     if not df_enc_cron.empty:
-        df_enc_cron = df_enc_cron.sort_values(by="t_anos").reset_index(drop=True)
+        df_enc_cron = df_enc_cron.sort_values(by=["t_anos", "clone_id"]).reset_index(drop=True)
     df_enc_cron.to_csv(temporal_dir / "encuent.csv", index=False)
 
     df_enc_final = df_enc_cron.copy()
@@ -413,9 +417,9 @@ def main():
     de_rel_end = abs((e_end - e_ini) / e_ini) if abs(e_ini) > 1e-15 else 0.0
     pd.DataFrame([{
         "t_final_anos": round(t_total_anos, 4),
-        "energia_total": round(float(e_end), 12),
-        "energia_cinetica": round(float(t_kin_end), 12),
-        "energia_potencial": round(float(e_end - t_kin_end), 12),
+        "energia_total": round(float(e_end * gm_factor), 12),
+        "energia_cinetica": round(float(t_kin_end * gm_factor), 12),
+        "energia_potencial": round(float((e_end - t_kin_end) * gm_factor), 12),
         "delta_e_relativo": float(f"{de_rel_end:.6e}")
     }]).to_csv(final_dir / "energia.csv", index=False)
 

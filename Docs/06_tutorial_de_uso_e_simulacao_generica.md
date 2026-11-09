@@ -210,3 +210,4 @@ plt.show()
 
 ### No Excel ou Power BI
 Basta clicar duas vezes em qualquer arquivo da pasta `final/` ou `temporal/`. Eles abrem nativamente com colunas separadas e valores formatados.
+
