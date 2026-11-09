@@ -31,7 +31,7 @@ class ReboundExperimentRunner:
     def __init__(self, use_evorb_k: bool = False):
         """Inicializa o simulador em estado limpo."""
         self.use_evorb_k: bool = use_evorb_k
-        self.sim: Optional[rebound.Simulation] = None
+        self.sim: rebound.Simulation = rebound.Simulation()
         self.t_alinhamento: float = 0.0
         self.alinhado: bool = False
         self._init_simulation()

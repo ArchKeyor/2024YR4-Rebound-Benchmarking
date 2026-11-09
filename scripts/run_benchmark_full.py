@@ -54,7 +54,10 @@ def run_full_benchmark(input_dir_str: str = "data/evorb_raw/datos1"):
     # 1. Carregar Dados de Entrada e Gabarito
     print(f"\n[1/5] Ingerindo arquivos da pasta ({input_dir.name})...")
     datos = parse_datos(datos_path)
-    condin_gabarito = parse_condin_binary(condin_path) if condin_path.exists() else None
+    if not condin_path.exists():
+        print(f"[-] Erro: Arquivo de gabarito {condin_path} não encontrado!")
+        return
+    condin_gabarito = parse_condin_binary(condin_path)
     encuentros_gabarito = parse_encuent(encuent_path) if encuent_path.exists() else []
 
     print(f"      -> datos.dat: 8 planetas e {len(datos['particles'])} clones do 2024 YR4 decodificados.")

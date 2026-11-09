@@ -1,0 +1,15 @@
+{
+  "include": [
+    "src",
+    "scripts",
+    "tests"
+  ],
+  "exclude": [
+    "venv",
+    "**/__pycache__",
+    "data"
+  ],
+  "venvPath": ".",
+  "venv": "venv",
+  "stubPath": "typings"
+}
